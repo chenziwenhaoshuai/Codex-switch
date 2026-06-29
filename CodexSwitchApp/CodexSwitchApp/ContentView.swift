@@ -457,6 +457,9 @@ struct ProviderEditSheet: View {
                     .disabled(!draft.modelMapping.enabled)
             }
 
+            Toggle("开启转换", isOn: $draft.chatCompletionsBridgeEnabled)
+                .toggleStyle(.checkbox)
+
             Toggle("Enabled", isOn: $draft.enabled)
                 .toggleStyle(.checkbox)
 

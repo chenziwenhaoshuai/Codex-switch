@@ -134,7 +134,8 @@ base_url = "http://127.0.0.1:8787/v1"
       "modelMapping": {
         "enabled": false,
         "targetModel": ""
-      }
+      },
+      "chatCompletionsBridgeEnabled": false
     }
   ]
 }
@@ -149,6 +150,10 @@ base_url = "http://127.0.0.1:8787/v1"
 ```
 
 如果 `modelMapping.enabled` 为 `true`，`modelMapping.targetModel` 会覆盖 `defaultModel`。如果 `targetModel` 为空，则回退到该供应商的 `defaultModel`。
+
+### 🔁 Chat Completions 转换
+
+有些供应商只提供 `/v1/chat/completions`，不提供 `/v1/responses`。为该供应商开启 `chatCompletionsBridgeEnabled` 后，Codex Switch 会把 Codex 发来的 Responses 请求转换成 Chat Completions 请求，并把供应商响应转换回 Responses 结构。
 
 ---
 

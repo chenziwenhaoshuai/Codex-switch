@@ -134,7 +134,8 @@ Example:
       "modelMapping": {
         "enabled": false,
         "targetModel": ""
-      }
+      },
+      "chatCompletionsBridgeEnabled": false
     }
   ]
 }
@@ -149,6 +150,10 @@ incoming model -> provider model
 ```
 
 If `modelMapping.enabled` is `true`, `modelMapping.targetModel` overrides `defaultModel`. If `targetModel` is empty, Codex Switch falls back to `defaultModel`.
+
+### 🔁 Chat Completions Bridge
+
+Some providers expose `/v1/chat/completions` but not `/v1/responses`. Enable `chatCompletionsBridgeEnabled` for that provider to let Codex Switch translate Codex's Responses requests into Chat Completions requests and translate the provider response back into a Responses-shaped result.
 
 ---
 

@@ -9,6 +9,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
     var headers: [String: String]
     var defaultModel: String
     var modelMapping: ModelMappingConfig
+    var chatCompletionsBridgeEnabled: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -23,6 +24,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         case headers
         case defaultModel
         case modelMapping
+        case chatCompletionsBridgeEnabled
     }
 
     init(
@@ -33,7 +35,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         enabled: Bool,
         headers: [String: String],
         defaultModel: String,
-        modelMapping: ModelMappingConfig
+        modelMapping: ModelMappingConfig,
+        chatCompletionsBridgeEnabled: Bool
     ) {
         self.id = id
         self.name = name
@@ -43,6 +46,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         self.headers = headers
         self.defaultModel = defaultModel
         self.modelMapping = modelMapping
+        self.chatCompletionsBridgeEnabled = chatCompletionsBridgeEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -55,6 +59,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         headers = try container.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
         defaultModel = try container.decodeIfPresent(String.self, forKey: .defaultModel) ?? ""
         modelMapping = try container.decodeIfPresent(ModelMappingConfig.self, forKey: .modelMapping) ?? .disabled()
+        chatCompletionsBridgeEnabled = try container.decodeIfPresent(Bool.self, forKey: .chatCompletionsBridgeEnabled) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -67,6 +72,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         try container.encode(headers, forKey: .headers)
         try container.encode(defaultModel, forKey: .defaultModel)
         try container.encode(modelMapping, forKey: .modelMapping)
+        try container.encode(chatCompletionsBridgeEnabled, forKey: .chatCompletionsBridgeEnabled)
     }
 
     static func blank() -> ProviderConfig {
@@ -78,7 +84,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             enabled: true,
             headers: [:],
             defaultModel: "",
-            modelMapping: .disabled()
+            modelMapping: .disabled(),
+            chatCompletionsBridgeEnabled: false
         )
     }
 
@@ -91,7 +98,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             enabled: true,
             headers: [:],
             defaultModel: "",
-            modelMapping: .disabled()
+            modelMapping: .disabled(),
+            chatCompletionsBridgeEnabled: false
         )
     }
 }

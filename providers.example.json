@@ -12,7 +12,8 @@
       "modelMapping": {
         "enabled": false,
         "targetModel": ""
-      }
+      },
+      "chatCompletionsBridgeEnabled": false
     }
   ]
 }
