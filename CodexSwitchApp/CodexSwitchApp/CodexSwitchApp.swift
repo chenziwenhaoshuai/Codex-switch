@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ByteRouterApp: App {
+struct CodexSwitchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var viewModel = ProxyViewModel()
 

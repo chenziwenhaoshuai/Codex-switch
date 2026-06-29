@@ -210,8 +210,8 @@ brew install create-dmg
 输出：
 
 ```text
-ByteRouterApp/build/Codex Switch.app
-ByteRouterApp/Codex Switch.dmg
+CodexSwitchApp/build/Codex Switch.app
+CodexSwitchApp/Codex Switch.dmg
 ```
 
 ---
@@ -219,8 +219,8 @@ ByteRouterApp/Codex Switch.dmg
 ## 🗂️ 项目结构
 
 ```text
-ByteRouterApp/
-  ByteRouterApp/
+CodexSwitchApp/
+  CodexSwitchApp/
     ContentView.swift            # macOS 界面
     ProviderStore.swift          # 供应商配置持久化
     ProxyProcessManager.swift    # 启动内置 Python 路由器
@@ -237,15 +237,15 @@ providers.example.json           # 安全示例配置
 
 ```sh
 swiftc -typecheck \
-  ByteRouterApp/ByteRouterApp/AppDelegate.swift \
-  ByteRouterApp/ByteRouterApp/ByteRouterApp.swift \
-  ByteRouterApp/ByteRouterApp/CodexConfigManager.swift \
-  ByteRouterApp/ByteRouterApp/ContentView.swift \
-  ByteRouterApp/ByteRouterApp/ProviderStore.swift \
-  ByteRouterApp/ByteRouterApp/ProxyProcessManager.swift \
-  ByteRouterApp/ByteRouterApp/ProxyViewModel.swift
+  CodexSwitchApp/CodexSwitchApp/AppDelegate.swift \
+  CodexSwitchApp/CodexSwitchApp/CodexSwitchApp.swift \
+  CodexSwitchApp/CodexSwitchApp/CodexConfigManager.swift \
+  CodexSwitchApp/CodexSwitchApp/ContentView.swift \
+  CodexSwitchApp/CodexSwitchApp/ProviderStore.swift \
+  CodexSwitchApp/CodexSwitchApp/ProxyProcessManager.swift \
+  CodexSwitchApp/CodexSwitchApp/ProxyViewModel.swift
 
-python3 -m py_compile ByteRouterApp/ByteRouterApp/Resources/proxy.py
+python3 -m py_compile CodexSwitchApp/CodexSwitchApp/Resources/proxy.py
 ```
 
 ---

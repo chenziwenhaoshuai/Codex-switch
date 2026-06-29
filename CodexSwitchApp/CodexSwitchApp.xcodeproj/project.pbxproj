@@ -13,21 +13,21 @@
 		5868A9BD21D50CE645351129 /* ProxyProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDC83D9B6E369460618B1B5 /* ProxyProcessManager.swift */; };
 		6223DFD16D6024C13B7A0B69 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A647F8BB3485A74AF030F61D /* AppDelegate.swift */; };
 		7B51BD729B6C4E1B9E0F1FA1 /* proxy.py in Resources */ = {isa = PBXBuildFile; fileRef = 4D3F0AA6C17F450DA1D218A9 /* proxy.py */; };
-		98E2B177EB715C4C63DD7A7F /* ByteRouterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */; };
+		98E2B177EB715C4C63DD7A7F /* CodexSwitchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACB5973C9B23898DB5FBA9D /* CodexSwitchApp.swift */; };
 		B09B8A2D177F709E2F52597F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF44F5557D22613B8845DD23 /* Assets.xcassets */; };
 		DDBD64DCF59AB525048F164C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18087EDABEEF9907A7E9F1B /* ContentView.swift */; };
 		E7C7B2EF4E7A4D4D9A66AB0B /* ProviderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		11434F9AE1ED98B62D1BEF38 /* ByteRouterApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ByteRouterApp.entitlements; sourceTree = "<group>"; };
+		11434F9AE1ED98B62D1BEF38 /* CodexSwitchApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodexSwitchApp.entitlements; sourceTree = "<group>"; };
 		135EAB5138B74D07A88CAAC8 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		4D3F0AA6C17F450DA1D218A9 /* proxy.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = Resources/proxy.py; sourceTree = "<group>"; };
 		8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStore.swift; sourceTree = "<group>"; };
-		8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ByteRouterApp.swift; sourceTree = "<group>"; };
+		8ACB5973C9B23898DB5FBA9D /* CodexSwitchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSwitchApp.swift; sourceTree = "<group>"; };
 		9E3EACB00C3C4EC8A9E8AF65 /* CodexConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexConfigManager.swift; sourceTree = "<group>"; };
 		9622ED145CF07A28B06457C2 /* ProxyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyViewModel.swift; sourceTree = "<group>"; };
-		A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Switch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3B4D41C86EE4EBF0138EEBE /* CodexSwitchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Switch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A647F8BB3485A74AF030F61D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B18087EDABEEF9907A7E9F1B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		DDDC83D9B6E369460618B1B5 /* ProxyProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyProcessManager.swift; sourceTree = "<group>"; };
@@ -35,13 +35,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		1DD8AE9EFA08B714C8263AA5 /* ByteRouterApp */ = {
+		1DD8AE9EFA08B714C8263AA5 /* CodexSwitchApp */ = {
 			isa = PBXGroup;
 			children = (
 				A647F8BB3485A74AF030F61D /* AppDelegate.swift */,
 				FF44F5557D22613B8845DD23 /* Assets.xcassets */,
-				11434F9AE1ED98B62D1BEF38 /* ByteRouterApp.entitlements */,
-				8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */,
+				11434F9AE1ED98B62D1BEF38 /* CodexSwitchApp.entitlements */,
+				8ACB5973C9B23898DB5FBA9D /* CodexSwitchApp.swift */,
 				9E3EACB00C3C4EC8A9E8AF65 /* CodexConfigManager.swift */,
 				B18087EDABEEF9907A7E9F1B /* ContentView.swift */,
 				8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */,
@@ -50,13 +50,13 @@
 				135EAB5138B74D07A88CAAC8 /* AppIcon.icns */,
 				4D3F0AA6C17F450DA1D218A9 /* proxy.py */,
 			);
-			path = ByteRouterApp;
+			path = CodexSwitchApp;
 			sourceTree = "<group>";
 		};
 		3492F533949F5004673A6E35 = {
 			isa = PBXGroup;
 			children = (
-				1DD8AE9EFA08B714C8263AA5 /* ByteRouterApp */,
+				1DD8AE9EFA08B714C8263AA5 /* CodexSwitchApp */,
 				F3DFC70CA433025B3E126AE4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -64,7 +64,7 @@
 		F3DFC70CA433025B3E126AE4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */,
+				A3B4D41C86EE4EBF0138EEBE /* CodexSwitchApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,9 +72,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		CFD2CF1D4F755CD805C9CBF8 /* ByteRouterApp */ = {
+		CFD2CF1D4F755CD805C9CBF8 /* CodexSwitchApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "ByteRouterApp" */;
+			buildConfigurationList = 5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "CodexSwitchApp" */;
 			buildPhases = (
 				545C783599855D5326FE9682 /* Sources */,
 				D88E3C394728D377BFB128E1 /* Resources */,
@@ -83,11 +83,11 @@
 			);
 			dependencies = (
 			);
-			name = ByteRouterApp;
+			name = CodexSwitchApp;
 			packageProductDependencies = (
 			);
-			productName = ByteRouterApp;
-			productReference = A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */;
+			productName = CodexSwitchApp;
+			productReference = A3B4D41C86EE4EBF0138EEBE /* CodexSwitchApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -104,7 +104,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "ByteRouterApp" */;
+			buildConfigurationList = 5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "CodexSwitchApp" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -118,7 +118,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				CFD2CF1D4F755CD805C9CBF8 /* ByteRouterApp */,
+				CFD2CF1D4F755CD805C9CBF8 /* CodexSwitchApp */,
 			);
 		};
 /* End PBXProject section */
@@ -142,7 +142,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6223DFD16D6024C13B7A0B69 /* AppDelegate.swift in Sources */,
-				98E2B177EB715C4C63DD7A7F /* ByteRouterApp.swift in Sources */,
+				98E2B177EB715C4C63DD7A7F /* CodexSwitchApp.swift in Sources */,
 				1C9B1D2E8F7A4B1E9C0D2A31 /* CodexConfigManager.swift in Sources */,
 				DDBD64DCF59AB525048F164C /* ContentView.swift in Sources */,
 				E7C7B2EF4E7A4D4D9A66AB0B /* ProviderStore.swift in Sources */,
@@ -158,7 +158,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ByteRouterApp/ByteRouterApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = CodexSwitchApp/CodexSwitchApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -240,7 +240,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ByteRouterApp/ByteRouterApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = CodexSwitchApp/CodexSwitchApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -328,7 +328,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "ByteRouterApp" */ = {
+		5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "CodexSwitchApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1A7337E05840EA8CB31C46D8 /* Debug */,
@@ -337,7 +337,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "ByteRouterApp" */ = {
+		5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "CodexSwitchApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				63FEE3D911C43DDC4CAE58D7 /* Debug */,

@@ -11,13 +11,13 @@ targets:
     type: application
     platform: macOS
     sources:
-      - path: ByteRouterApp
+      - path: CodexSwitchApp
         excludes:
           - Resources
     resources:
-      - path: ByteRouterApp/Resources
+      - path: CodexSwitchApp/Resources
         buildPhase: resources
-      - path: ByteRouterApp/Assets.xcassets
+      - path: CodexSwitchApp/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.codexswitch.app
@@ -26,11 +26,11 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "13.0"
-        CODE_SIGN_ENTITLEMENTS: ByteRouterApp/ByteRouterApp.entitlements
+        CODE_SIGN_ENTITLEMENTS: CodexSwitchApp/CodexSwitchApp.entitlements
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_GENERATION_MODE: GeneratedByXcode
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.utilities"
     entitlements:
-      path: ByteRouterApp/ByteRouterApp.entitlements
+      path: CodexSwitchApp/CodexSwitchApp.entitlements

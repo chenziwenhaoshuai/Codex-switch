@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_ROOT="$ROOT_DIR/ByteRouterApp"
+APP_ROOT="$ROOT_DIR/CodexSwitchApp"
 APP_NAME="Codex Switch"
 APP_DIR="$APP_ROOT/build/${APP_NAME}.app"
 CONTENTS="$APP_DIR/Contents"
@@ -52,17 +52,17 @@ swiftc \
   -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
   -target arm64-apple-macos13.0 \
   -O \
-  "$APP_ROOT/ByteRouterApp/AppDelegate.swift" \
-  "$APP_ROOT/ByteRouterApp/ByteRouterApp.swift" \
-  "$APP_ROOT/ByteRouterApp/CodexConfigManager.swift" \
-  "$APP_ROOT/ByteRouterApp/ContentView.swift" \
-  "$APP_ROOT/ByteRouterApp/ProviderStore.swift" \
-  "$APP_ROOT/ByteRouterApp/ProxyProcessManager.swift" \
-  "$APP_ROOT/ByteRouterApp/ProxyViewModel.swift" \
+  "$APP_ROOT/CodexSwitchApp/AppDelegate.swift" \
+  "$APP_ROOT/CodexSwitchApp/CodexSwitchApp.swift" \
+  "$APP_ROOT/CodexSwitchApp/CodexConfigManager.swift" \
+  "$APP_ROOT/CodexSwitchApp/ContentView.swift" \
+  "$APP_ROOT/CodexSwitchApp/ProviderStore.swift" \
+  "$APP_ROOT/CodexSwitchApp/ProxyProcessManager.swift" \
+  "$APP_ROOT/CodexSwitchApp/ProxyViewModel.swift" \
   -o "$MACOS/$APP_NAME"
 
-cp "$APP_ROOT/ByteRouterApp/Resources/proxy.py" "$RESOURCES/proxy.py"
-cp "$APP_ROOT/ByteRouterApp/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
+cp "$APP_ROOT/CodexSwitchApp/Resources/proxy.py" "$RESOURCES/proxy.py"
+cp "$APP_ROOT/CodexSwitchApp/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 chmod +x "$MACOS/$APP_NAME"
 codesign --force --deep --sign - "$APP_DIR"
 
