@@ -27,7 +27,7 @@ NO_FORWARD = False
 LOG_SENSITIVE = False
 REQUEST_TIMEOUT_SECONDS = 600.0
 MAX_RESPONSE_LOG_BYTES = 1024 * 1024
-PROXY_VERSION = "2026-06-29-provider-router-v4-no-provider-enabled"
+PROXY_VERSION = "2026-06-29-provider-router-v5-chat-tool-history"
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -320,33 +320,14 @@ def response_item_to_chat_messages(item: Any) -> List[Dict[str, object]]:
         return []
 
     item_type = str(item.get("type") or "")
-    if item_type == "function_call_output":
-        call_id = str(item.get("call_id") or item.get("tool_call_id") or item.get("id") or "")
-        output = normalize_text_content(item.get("output") if "output" in item else item.get("content"))
-        message: Dict[str, object] = {"role": "tool", "content": output}
-        if call_id:
-            message["tool_call_id"] = call_id
-        return [message]
-
-    if item_type == "function_call":
-        call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
-        name = str(item.get("name") or "")
-        arguments = item.get("arguments", "{}")
-        if not isinstance(arguments, str):
-            arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
-        return [
-            {
-                "role": "assistant",
-                "content": "",
-                "tool_calls": [
-                    {
-                        "id": call_id,
-                        "type": "function",
-                        "function": {"name": name, "arguments": arguments},
-                    }
-                ],
-            }
-        ]
+    if item_type in {
+        "function_call",
+        "function_call_output",
+        "custom_tool_call",
+        "custom_tool_call_output",
+        "reasoning",
+    }:
+        return []
 
     if item_type in {"input_text", "text"}:
         return [{"role": "user", "content": normalize_text_content(item)}]
@@ -374,18 +355,129 @@ def response_item_to_chat_messages(item: Any) -> List[Dict[str, object]]:
     return [message]
 
 
+def append_chat_message(messages: List[Dict[str, object]], message: Dict[str, object]) -> None:
+    role = message.get("role")
+    if role == "assistant" and message.get("tool_calls"):
+        messages.append(message)
+        return
+    if role == "tool":
+        if str(message.get("tool_call_id") or "").strip():
+            messages.append(message)
+        return
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        messages.append(message)
+    elif isinstance(content, list) and content:
+        messages.append(message)
+
+
+def response_function_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
+    name = str(item.get("name") or "")
+    arguments = item.get("arguments", "{}")
+    if not isinstance(arguments, str):
+        arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "id": call_id,
+        "type": "function",
+        "function": {"name": name, "arguments": arguments},
+    }
+
+
+def function_call_output_to_tool_message(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("tool_call_id") or item.get("id") or "")
+    output = normalize_text_content(item.get("output") if "output" in item else item.get("content"))
+    message: Dict[str, object] = {"role": "tool", "content": output}
+    if call_id:
+        message["tool_call_id"] = call_id
+    return message
+
+
+def custom_tool_call_to_text(item: Dict[str, object]) -> str:
+    name = str(item.get("name") or "custom_tool")
+    call_input = item.get("input")
+    if not isinstance(call_input, str):
+        call_input = json.dumps(call_input, ensure_ascii=False, separators=(",", ":"))
+    return f"Custom tool call `{name}`:\n{call_input}"
+
+
+def custom_tool_output_to_text(item: Dict[str, object]) -> str:
+    call_id = str(item.get("call_id") or item.get("id") or "unknown")
+    output = normalize_text_content(item.get("output") if "output" in item else item.get("content"))
+    return f"Custom tool output for `{call_id}`:\n{output}"
+
+
 def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, object]]:
     messages: List[Dict[str, object]] = []
     instructions = data.get("instructions")
     if isinstance(instructions, str) and instructions.strip():
         messages.append({"role": "system", "content": instructions})
 
+    pending_tool_calls: List[Dict[str, object]] = []
+    known_tool_call_ids = set()
+
+    def flush_pending_tool_calls() -> None:
+        if not pending_tool_calls:
+            return
+        messages.append(
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": list(pending_tool_calls),
+            }
+        )
+        for tool_call in pending_tool_calls:
+            tool_call_id = tool_call.get("id")
+            if isinstance(tool_call_id, str):
+                known_tool_call_ids.add(tool_call_id)
+        pending_tool_calls.clear()
+
     response_input = data.get("input")
     if isinstance(response_input, str):
         messages.append({"role": "user", "content": response_input})
     elif isinstance(response_input, list):
         for item in response_input:
-            messages.extend(response_item_to_chat_messages(item))
+            if not isinstance(item, dict):
+                flush_pending_tool_calls()
+                append_chat_message(messages, {"role": "user", "content": str(item)})
+                continue
+
+            item_type = str(item.get("type") or "")
+            if item_type == "function_call":
+                pending_tool_calls.append(response_function_call_to_chat_tool_call(item))
+                continue
+
+            if item_type == "function_call_output":
+                flush_pending_tool_calls()
+                tool_message = function_call_output_to_tool_message(item)
+                tool_call_id = str(tool_message.get("tool_call_id") or "")
+                if tool_call_id in known_tool_call_ids:
+                    append_chat_message(messages, tool_message)
+                else:
+                    output = normalize_text_content(item.get("output") if "output" in item else item.get("content"))
+                    append_chat_message(
+                        messages,
+                        {
+                            "role": "user",
+                            "content": f"Tool output for `{tool_call_id or 'unknown'}`:\n{output}",
+                        },
+                    )
+                continue
+
+            flush_pending_tool_calls()
+            if item_type == "custom_tool_call":
+                append_chat_message(messages, {"role": "assistant", "content": custom_tool_call_to_text(item)})
+                continue
+            if item_type == "custom_tool_call_output":
+                append_chat_message(messages, {"role": "user", "content": custom_tool_output_to_text(item)})
+                continue
+            if item_type == "reasoning":
+                continue
+
+            for message in response_item_to_chat_messages(item):
+                append_chat_message(messages, message)
+
+    flush_pending_tool_calls()
 
     if not messages:
         messages.append({"role": "user", "content": ""})
@@ -1139,10 +1231,16 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             else:
                 self.forward_to_upstream(upstream_body, active_provider)
             elapsed_ms = int((time.time() - started) * 1000)
-            print(
-                f"[{received_at}] forwarded {self.command} {incoming.path} "
-                f"via {provider_name(active_provider)} in {elapsed_ms}ms"
-            )
+            if bridge_enabled:
+                print(
+                    f"[{received_at}] bridged {self.command} {incoming.path} "
+                    f"-> /v1/chat/completions via {provider_name(active_provider)} in {elapsed_ms}ms"
+                )
+            else:
+                print(
+                    f"[{received_at}] forwarded {self.command} {incoming.path} "
+                    f"via {provider_name(active_provider)} in {elapsed_ms}ms"
+                )
 
         except Exception as error:
             save_proxy_error(error)
