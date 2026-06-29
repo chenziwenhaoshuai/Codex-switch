@@ -18,9 +18,6 @@ struct ContentView: View {
                                 provider: provider,
                                 isActive: provider.id == viewModel.activeProviderId,
                                 isRunning: viewModel.isRunning,
-                                onSelect: {
-                                    viewModel.selectProvider(provider.id)
-                                },
                                 onEnable: {
                                     viewModel.selectProvider(provider.id)
                                 },
@@ -282,54 +279,50 @@ struct ProviderCardView: View {
     let provider: ProviderConfig
     let isActive: Bool
     let isRunning: Bool
-    let onSelect: () -> Void
     let onEnable: () -> Void
     let onEdit: () -> Void
     let onDuplicate: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color.gray.opacity(0.55))
-                    .frame(width: 18)
+        HStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color.gray.opacity(0.55))
+                .frame(width: 18)
 
-                providerAvatar
+            providerAvatar
 
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 7) {
-                        Text(provider.name)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-
-                        if provider.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            tag("No Key", color: .gray)
-                        } else {
-                            tag("API Key", color: .blue)
-                        }
-                    }
-
-                    Text(provider.baseURL)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.accentColor)
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 7) {
+                    Text(provider.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
                         .lineLimit(1)
+
+                    if provider.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        tag("No Key", color: .gray)
+                    } else {
+                        tag("API Key", color: .blue)
+                    }
                 }
 
-                Spacer(minLength: 16)
-
-                rowActions
+                Text(provider.baseURL)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 64)
-            .background(cardBackground)
-            .overlay(cardBorder)
+
+            Spacer(minLength: 16)
+
+            rowActions
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .frame(height: 64)
+        .background(cardBackground)
+        .overlay(cardBorder)
         .contextMenu {
-            Button("Enable") { onEnable() }
+            Button("Use") { onEnable() }
             Button("Edit") { onEdit() }
             Button("Duplicate") { onDuplicate() }
             Divider()
