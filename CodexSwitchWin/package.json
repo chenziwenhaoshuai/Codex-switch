@@ -1,6 +1,6 @@
 {
   "name": "codex-switch-win",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Codex Switch for Windows",
   "author": "Ziwen",
   "main": "src/main.js",
