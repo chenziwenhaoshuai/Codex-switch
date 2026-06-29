@@ -36,3 +36,4 @@ node_modules/
 # Electron build outputs
 CodexSwitchWin/dist/
 CodexSwitchWin/build/
+CodexSwitchWin/artifacts/
