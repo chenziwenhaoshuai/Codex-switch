@@ -1,0 +1,352 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1C9B1D2E8F7A4B1E9C0D2A31 /* CodexConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EACB00C3C4EC8A9E8AF65 /* CodexConfigManager.swift */; };
+		20EA8A5CF1CA42D8B37F7E10 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 135EAB5138B74D07A88CAAC8 /* AppIcon.icns */; };
+		2929827458FB073FF88914FA /* ProxyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9622ED145CF07A28B06457C2 /* ProxyViewModel.swift */; };
+		5868A9BD21D50CE645351129 /* ProxyProcessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDC83D9B6E369460618B1B5 /* ProxyProcessManager.swift */; };
+		6223DFD16D6024C13B7A0B69 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A647F8BB3485A74AF030F61D /* AppDelegate.swift */; };
+		7B51BD729B6C4E1B9E0F1FA1 /* proxy.py in Resources */ = {isa = PBXBuildFile; fileRef = 4D3F0AA6C17F450DA1D218A9 /* proxy.py */; };
+		98E2B177EB715C4C63DD7A7F /* ByteRouterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */; };
+		B09B8A2D177F709E2F52597F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF44F5557D22613B8845DD23 /* Assets.xcassets */; };
+		DDBD64DCF59AB525048F164C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18087EDABEEF9907A7E9F1B /* ContentView.swift */; };
+		E7C7B2EF4E7A4D4D9A66AB0B /* ProviderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		11434F9AE1ED98B62D1BEF38 /* ByteRouterApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ByteRouterApp.entitlements; sourceTree = "<group>"; };
+		135EAB5138B74D07A88CAAC8 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
+		4D3F0AA6C17F450DA1D218A9 /* proxy.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = Resources/proxy.py; sourceTree = "<group>"; };
+		8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderStore.swift; sourceTree = "<group>"; };
+		8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ByteRouterApp.swift; sourceTree = "<group>"; };
+		9E3EACB00C3C4EC8A9E8AF65 /* CodexConfigManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexConfigManager.swift; sourceTree = "<group>"; };
+		9622ED145CF07A28B06457C2 /* ProxyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyViewModel.swift; sourceTree = "<group>"; };
+		A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Switch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A647F8BB3485A74AF030F61D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B18087EDABEEF9907A7E9F1B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		DDDC83D9B6E369460618B1B5 /* ProxyProcessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyProcessManager.swift; sourceTree = "<group>"; };
+		FF44F5557D22613B8845DD23 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1DD8AE9EFA08B714C8263AA5 /* ByteRouterApp */ = {
+			isa = PBXGroup;
+			children = (
+				A647F8BB3485A74AF030F61D /* AppDelegate.swift */,
+				FF44F5557D22613B8845DD23 /* Assets.xcassets */,
+				11434F9AE1ED98B62D1BEF38 /* ByteRouterApp.entitlements */,
+				8ACB5973C9B23898DB5FBA9D /* ByteRouterApp.swift */,
+				9E3EACB00C3C4EC8A9E8AF65 /* CodexConfigManager.swift */,
+				B18087EDABEEF9907A7E9F1B /* ContentView.swift */,
+				8DB53FB0F4474B9EA68F5026 /* ProviderStore.swift */,
+				DDDC83D9B6E369460618B1B5 /* ProxyProcessManager.swift */,
+				9622ED145CF07A28B06457C2 /* ProxyViewModel.swift */,
+				135EAB5138B74D07A88CAAC8 /* AppIcon.icns */,
+				4D3F0AA6C17F450DA1D218A9 /* proxy.py */,
+			);
+			path = ByteRouterApp;
+			sourceTree = "<group>";
+		};
+		3492F533949F5004673A6E35 = {
+			isa = PBXGroup;
+			children = (
+				1DD8AE9EFA08B714C8263AA5 /* ByteRouterApp */,
+				F3DFC70CA433025B3E126AE4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F3DFC70CA433025B3E126AE4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CFD2CF1D4F755CD805C9CBF8 /* ByteRouterApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "ByteRouterApp" */;
+			buildPhases = (
+				545C783599855D5326FE9682 /* Sources */,
+				D88E3C394728D377BFB128E1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ByteRouterApp;
+			packageProductDependencies = (
+			);
+			productName = ByteRouterApp;
+			productReference = A3B4D41C86EE4EBF0138EEBE /* ByteRouterApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E45F7041C3356C220DD8363A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					CFD2CF1D4F755CD805C9CBF8 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "ByteRouterApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3492F533949F5004673A6E35;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F3DFC70CA433025B3E126AE4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CFD2CF1D4F755CD805C9CBF8 /* ByteRouterApp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D88E3C394728D377BFB128E1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B09B8A2D177F709E2F52597F /* Assets.xcassets in Resources */,
+				20EA8A5CF1CA42D8B37F7E10 /* AppIcon.icns in Resources */,
+				7B51BD729B6C4E1B9E0F1FA1 /* proxy.py in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		545C783599855D5326FE9682 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6223DFD16D6024C13B7A0B69 /* AppDelegate.swift in Sources */,
+				98E2B177EB715C4C63DD7A7F /* ByteRouterApp.swift in Sources */,
+				1C9B1D2E8F7A4B1E9C0D2A31 /* CodexConfigManager.swift in Sources */,
+				DDBD64DCF59AB525048F164C /* ContentView.swift in Sources */,
+				E7C7B2EF4E7A4D4D9A66AB0B /* ProviderStore.swift in Sources */,
+				5868A9BD21D50CE645351129 /* ProxyProcessManager.swift in Sources */,
+				2929827458FB073FF88914FA /* ProxyViewModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A7337E05840EA8CB31C46D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ByteRouterApp/ByteRouterApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedByXcode;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codexswitch.app;
+				PRODUCT_NAME = "Codex Switch";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		253F2FEC7CB1D2F116F3FD53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		4B928464FC01D3FE8E4F574D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ByteRouterApp/ByteRouterApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_GENERATION_MODE = GeneratedByXcode;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codexswitch.app;
+				PRODUCT_NAME = "Codex Switch";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		63FEE3D911C43DDC4CAE58D7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5EECDACBF9AA65A05283F93E /* Build configuration list for PBXNativeTarget "ByteRouterApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A7337E05840EA8CB31C46D8 /* Debug */,
+				4B928464FC01D3FE8E4F574D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5F087BD0ED176BB87FA6702F /* Build configuration list for PBXProject "ByteRouterApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				63FEE3D911C43DDC4CAE58D7 /* Debug */,
+				253F2FEC7CB1D2F116F3FD53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E45F7041C3356C220DD8363A /* Project object */;
+}

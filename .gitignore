@@ -1,0 +1,34 @@
+.DS_Store
+
+# Local secrets and runtime state
+.env
+providers.json
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS / Xcode build products
+DerivedData/
+build/
+*.dmg
+*.zip
+*.xcarchive
+*.xcresult
+
+# Local screenshots / pasteboard images
+*.png
+*.jpg
+*.jpeg
+*.gif
+!logo.png
+
+# IDE/editor state
+.idea/
+.trae/
+.vscode/
+
+# Dependencies
+node_modules/
