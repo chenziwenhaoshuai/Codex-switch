@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex Switch</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar">
+      <h1>Codex Switch</h1>
+      <button class="icon" id="settingsBtn" title="Settings">⚙</button>
+      <button class="icon" id="logsBtn" title="Logs">▣</button>
+      <label class="switch">
+        <input type="checkbox" id="runToggle">
+        <span></span>
+      </label>
+      <div class="spacer"></div>
+      <button class="add" id="addBtn">＋</button>
+    </header>
+
+    <section class="providers" id="providers"></section>
+
+    <footer class="footer">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Stopped</span>
+      <span id="activeName"></span>
+      <code id="baseUrl">http://127.0.0.1:8787/v1</code>
+      <button class="copy" id="copyBtn">Copy</button>
+      <span class="grow"></span>
+      <span id="message"></span>
+      <span>© 2026 Ziwen</span>
+    </footer>
+  </main>
+
+  <aside class="logs hidden" id="logsPanel">
+    <div class="logs-head">
+      <span>Logs</span>
+      <button id="closeLogs">×</button>
+    </div>
+    <pre id="logs"></pre>
+  </aside>
+
+  <dialog id="providerDialog">
+    <form method="dialog" class="dialog-form">
+      <h2>Provider</h2>
+      <label>Name <input id="providerName"></label>
+      <label>Base URL <input id="providerBase"></label>
+      <label>API Key <input id="providerKey" type="password"></label>
+      <label>Default Model <input id="providerModel"></label>
+      <label class="check"><input id="providerMapping" type="checkbox"> 统一映射到默认模型</label>
+      <label class="check"><input id="providerBridge" type="checkbox"> 开启chat转response接口</label>
+      <div class="dialog-actions">
+        <button value="cancel">Cancel</button>
+        <button value="save" class="primary" id="saveProviderBtn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialog-form">
+      <h2>Settings</h2>
+      <label>Host <input id="hostInput"></label>
+      <label>Port <input id="portInput"></label>
+      <button id="setBaseBtn" type="button">Set Codex custom base_url</button>
+      <label class="check"><input id="logEnabled" type="checkbox"> 开启日志</label>
+      <button id="clearLogsBtn" type="button">清理日志缓存</button>
+      <div class="dialog-actions">
+        <button value="close">Close</button>
+        <button value="save" class="primary" id="saveSettingsBtn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

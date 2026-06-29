@@ -1,0 +1,37 @@
+{
+  "name": "codex-switch-win",
+  "version": "1.0.0",
+  "description": "Codex Switch for Windows",
+  "author": "Ziwen",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable"
+  },
+  "build": {
+    "appId": "com.ziwen.codexswitch",
+    "productName": "Codex Switch",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}
