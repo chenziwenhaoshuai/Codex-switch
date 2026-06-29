@@ -55,6 +55,8 @@ async function startProxy() {
     host: settings.host || "127.0.0.1",
     port,
     getConfig: () => config,
+    getSettings: () => settings,
+    appDir,
     log: addLog
   });
   addLog(`Codex Switch started on http://${settings.host}:${settings.port}`);

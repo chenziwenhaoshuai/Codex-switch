@@ -39,22 +39,39 @@ h1 {
 }
 .spacer, .grow { flex: 1; }
 .icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
   border: 0;
   background: transparent;
   border-radius: 7px;
+  padding: 0;
+  color: var(--muted);
+}
+.icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .icon:hover { background: rgba(0,0,0,.06); }
 .add {
   width: 30px;
   height: 30px;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 50%;
+  padding: 0;
   color: white;
   background: var(--orange);
   font-weight: 700;
   font-size: 18px;
+  line-height: 1;
 }
 
 .switch input { display: none; }

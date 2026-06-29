@@ -10,14 +10,28 @@
   <main class="app">
     <header class="toolbar">
       <h1>Codex Switch</h1>
-      <button class="icon" id="settingsBtn" title="Settings">⚙</button>
-      <button class="icon" id="logsBtn" title="Logs">▣</button>
-      <label class="switch">
+      <button class="icon" id="settingsBtn" title="Settings" aria-label="Settings" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.04.04a2 2 0 0 1-2.83 2.83l-.04-.04a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.07a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.04.04a2 2 0 0 1-2.83-2.83l.04-.04A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.07A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88l-.04-.04a2 2 0 0 1 2.83-2.83l.04.04a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.01V3a2 2 0 0 1 4 0v.07a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.04-.04a2 2 0 0 1 2.83 2.83l-.04.04a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 0 1 0 4h-.07A1.7 1.7 0 0 0 19.4 15Z"></path>
+        </svg>
+      </button>
+      <button class="icon" id="logsBtn" title="Logs" aria-label="Logs" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 6h13"></path>
+          <path d="M8 12h13"></path>
+          <path d="M8 18h13"></path>
+          <path d="M3 6h.01"></path>
+          <path d="M3 12h.01"></path>
+          <path d="M3 18h.01"></path>
+        </svg>
+      </button>
+      <label class="switch" title="Start or stop proxy">
         <input type="checkbox" id="runToggle">
         <span></span>
       </label>
       <div class="spacer"></div>
-      <button class="add" id="addBtn">＋</button>
+      <button class="add" id="addBtn" title="Add provider" type="button">+</button>
     </header>
 
     <section class="providers" id="providers"></section>
@@ -27,17 +41,17 @@
       <span id="statusText">Stopped</span>
       <span id="activeName"></span>
       <code id="baseUrl">http://127.0.0.1:8787/v1</code>
-      <button class="copy" id="copyBtn">Copy</button>
+      <button class="copy" id="copyBtn" type="button">Copy</button>
       <span class="grow"></span>
       <span id="message"></span>
-      <span>© 2026 Ziwen</span>
+      <span>2026 Ziwen</span>
     </footer>
   </main>
 
   <aside class="logs hidden" id="logsPanel">
     <div class="logs-head">
       <span>Logs</span>
-      <button id="closeLogs">×</button>
+      <button id="closeLogs" type="button">x</button>
     </div>
     <pre id="logs"></pre>
   </aside>
@@ -49,8 +63,8 @@
       <label>Base URL <input id="providerBase"></label>
       <label>API Key <input id="providerKey" type="password"></label>
       <label>Default Model <input id="providerModel"></label>
-      <label class="check"><input id="providerMapping" type="checkbox"> 统一映射到默认模型</label>
-      <label class="check"><input id="providerBridge" type="checkbox"> 开启chat转response接口</label>
+      <label class="check"><input id="providerMapping" type="checkbox"> Map all requests to default model</label>
+      <label class="check"><input id="providerBridge" type="checkbox"> Bridge Responses to Chat Completions</label>
       <div class="dialog-actions">
         <button value="cancel">Cancel</button>
         <button value="save" class="primary" id="saveProviderBtn">Save</button>
@@ -63,9 +77,9 @@
       <h2>Settings</h2>
       <label>Host <input id="hostInput"></label>
       <label>Port <input id="portInput"></label>
-      <button id="setBaseBtn" type="button">Set Codex custom base_url</button>
-      <label class="check"><input id="logEnabled" type="checkbox"> 开启日志</label>
-      <button id="clearLogsBtn" type="button">清理日志缓存</button>
+      <button id="setBaseBtn" type="button">Copy Codex custom base_url</button>
+      <label class="check"><input id="logEnabled" type="checkbox"> Enable request/response logs</label>
+      <button id="clearLogsBtn" type="button">Clear log cache</button>
       <div class="dialog-actions">
         <button value="close">Close</button>
         <button value="save" class="primary" id="saveSettingsBtn">Save</button>
