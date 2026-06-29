@@ -149,7 +149,7 @@ When `defaultModel` is set, Codex Switch rewrites the request body's top-level `
 incoming model -> provider model
 ```
 
-If `modelMapping.enabled` is `true`, `modelMapping.targetModel` overrides `defaultModel`. If `targetModel` is empty, Codex Switch falls back to `defaultModel`.
+If `modelMapping.enabled` is `true`, Codex Switch always maps the incoming `model` to that provider's `defaultModel`, so Codex can keep any model name in `config.toml` while the active provider receives its own configured model.
 
 ### 🔁 Chat Completions Bridge
 

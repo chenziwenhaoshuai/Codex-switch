@@ -449,13 +449,8 @@ struct ProviderEditSheet: View {
                 TextField("gpt-5", text: $draft.defaultModel)
             }
 
-            Toggle("Use custom mapped model", isOn: $draft.modelMapping.enabled)
+            Toggle("统一映射到默认模型", isOn: $draft.modelMapping.enabled)
                 .toggleStyle(.checkbox)
-
-            formRow("Map To") {
-                TextField("gpt-5", text: $draft.modelMapping.targetModel)
-                    .disabled(!draft.modelMapping.enabled)
-            }
 
             Toggle("开启chat转response接口", isOn: $draft.chatCompletionsBridgeEnabled)
                 .toggleStyle(.checkbox)

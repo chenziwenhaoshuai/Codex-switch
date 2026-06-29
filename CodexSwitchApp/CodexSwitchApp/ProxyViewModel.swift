@@ -114,7 +114,7 @@ class ProxyViewModel: ObservableObject {
     func updateProvider(_ provider: ProviderConfig) {
         guard let index = providers.firstIndex(where: { $0.id == provider.id }) else { return }
         var updated = provider
-        if updated.modelMapping.enabled && updated.modelMapping.targetModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if updated.modelMapping.enabled {
             updated.modelMapping.targetModel = updated.defaultModel
         }
         providers[index] = updated

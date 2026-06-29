@@ -149,7 +149,7 @@ base_url = "http://127.0.0.1:8787/v1"
 请求模型 -> 供应商模型
 ```
 
-如果 `modelMapping.enabled` 为 `true`，`modelMapping.targetModel` 会覆盖 `defaultModel`。如果 `targetModel` 为空，则回退到该供应商的 `defaultModel`。
+如果 `modelMapping.enabled` 为 `true`，Codex Switch 会始终把请求里的 `model` 映射成该供应商的 `defaultModel`。这样 Codex 的 `config.toml` 可以保留任意模型名，实际发给当前供应商的始终是供应商配置里的模型名。
 
 ### 🔁 Chat Completions 转换
 

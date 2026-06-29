@@ -27,7 +27,7 @@ NO_FORWARD = False
 LOG_SENSITIVE = False
 REQUEST_TIMEOUT_SECONDS = 600.0
 MAX_RESPONSE_LOG_BYTES = 1024 * 1024
-PROXY_VERSION = "2026-06-29-provider-router-v2-chat-bridge"
+PROXY_VERSION = "2026-06-29-provider-router-v3-model-mapping"
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -221,9 +221,11 @@ def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, obj
 
     default_model = str(provider.get("defaultModel") or "").strip()
     model_mapping = provider.get("modelMapping")
-    target_model = default_model
-    if isinstance(model_mapping, dict) and model_mapping.get("enabled"):
-        target_model = str(model_mapping.get("targetModel") or "").strip() or default_model
+    mapping_enabled = isinstance(model_mapping, dict) and bool(model_mapping.get("enabled"))
+    if mapping_enabled:
+        target_model = default_model or str(model_mapping.get("targetModel") or "").strip()
+    else:
+        target_model = default_model
     if not target_model:
         return body
 
