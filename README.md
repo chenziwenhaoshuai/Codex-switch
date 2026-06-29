@@ -128,7 +128,6 @@ Example:
       "name": "OpenAI",
       "baseURL": "https://api.openai.com/v1",
       "apiKey": "",
-      "enabled": true,
       "headers": {},
       "defaultModel": "",
       "modelMapping": {

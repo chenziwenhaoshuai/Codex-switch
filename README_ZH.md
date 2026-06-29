@@ -128,7 +128,6 @@ base_url = "http://127.0.0.1:8787/v1"
       "name": "OpenAI",
       "baseURL": "https://api.openai.com/v1",
       "apiKey": "",
-      "enabled": true,
       "headers": {},
       "defaultModel": "",
       "modelMapping": {

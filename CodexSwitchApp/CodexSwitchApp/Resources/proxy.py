@@ -27,7 +27,7 @@ NO_FORWARD = False
 LOG_SENSITIVE = False
 REQUEST_TIMEOUT_SECONDS = 600.0
 MAX_RESPONSE_LOG_BYTES = 1024 * 1024
-PROXY_VERSION = "2026-06-29-provider-router-v3-model-mapping"
+PROXY_VERSION = "2026-06-29-provider-router-v4-no-provider-enabled"
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -160,7 +160,6 @@ def default_router_config() -> Dict[str, object]:
                 "name": "OpenAI",
                 "baseURL": "https://api.openai.com/v1",
                 "apiKey": "",
-                "enabled": True,
                 "headers": {},
                 "defaultModel": "",
                 "modelMapping": {
@@ -195,21 +194,17 @@ def load_router_config() -> Tuple[Dict[str, object], Dict[str, object]]:
         raise ValueError("Router config must contain at least one provider")
 
     active_provider_id = str(config.get("activeProviderId") or "")
-    enabled_providers = [
-        provider
-        for provider in providers
-        if isinstance(provider, dict) and provider.get("enabled", True)
-    ]
-    if not enabled_providers:
-        raise ValueError("Router config has no enabled providers")
+    valid_providers = [provider for provider in providers if isinstance(provider, dict)]
+    if not valid_providers:
+        raise ValueError("Router config has no valid providers")
 
     active_provider = next(
         (
             provider
-            for provider in enabled_providers
+            for provider in valid_providers
             if str(provider.get("id") or "") == active_provider_id
         ),
-        enabled_providers[0],
+        valid_providers[0],
     )
     validate_provider(active_provider)
     return config, active_provider

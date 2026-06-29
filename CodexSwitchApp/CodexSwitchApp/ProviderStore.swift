@@ -5,7 +5,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
     var name: String
     var baseURL: String
     var apiKey: String
-    var enabled: Bool
     var headers: [String: String]
     var defaultModel: String
     var modelMapping: ModelMappingConfig
@@ -20,7 +19,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         case authType
         case authHeader
         case authPrefix
-        case enabled
         case headers
         case defaultModel
         case modelMapping
@@ -32,7 +30,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         name: String,
         baseURL: String,
         apiKey: String,
-        enabled: Bool,
         headers: [String: String],
         defaultModel: String,
         modelMapping: ModelMappingConfig,
@@ -42,7 +39,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         self.name = name
         self.baseURL = baseURL
         self.apiKey = apiKey
-        self.enabled = enabled
         self.headers = headers
         self.defaultModel = defaultModel
         self.modelMapping = modelMapping
@@ -55,7 +51,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         name = try container.decode(String.self, forKey: .name)
         baseURL = try container.decode(String.self, forKey: .baseURL)
         apiKey = try container.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
-        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         headers = try container.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
         defaultModel = try container.decodeIfPresent(String.self, forKey: .defaultModel) ?? ""
         modelMapping = try container.decodeIfPresent(ModelMappingConfig.self, forKey: .modelMapping) ?? .disabled()
@@ -68,7 +63,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         try container.encode(name, forKey: .name)
         try container.encode(baseURL, forKey: .baseURL)
         try container.encode(apiKey, forKey: .apiKey)
-        try container.encode(enabled, forKey: .enabled)
         try container.encode(headers, forKey: .headers)
         try container.encode(defaultModel, forKey: .defaultModel)
         try container.encode(modelMapping, forKey: .modelMapping)
@@ -81,7 +75,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             name: "New Provider",
             baseURL: "https://api.openai.com/v1",
             apiKey: "",
-            enabled: true,
             headers: [:],
             defaultModel: "",
             modelMapping: .disabled(),
@@ -95,7 +88,6 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             name: "OpenAI",
             baseURL: "https://api.openai.com/v1",
             apiKey: "",
-            enabled: true,
             headers: [:],
             defaultModel: "",
             modelMapping: .disabled(),

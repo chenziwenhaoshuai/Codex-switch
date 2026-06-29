@@ -455,9 +455,6 @@ struct ProviderEditSheet: View {
             Toggle("开启chat转response接口", isOn: $draft.chatCompletionsBridgeEnabled)
                 .toggleStyle(.checkbox)
 
-            Toggle("Enabled", isOn: $draft.enabled)
-                .toggleStyle(.checkbox)
-
             HStack {
                 Spacer()
                 Button("Cancel") {
