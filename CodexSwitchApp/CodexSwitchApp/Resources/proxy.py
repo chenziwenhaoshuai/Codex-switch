@@ -24,10 +24,11 @@ LOG_DIR = Path("logs")
 ROUTER_CONFIG_PATH = SCRIPT_DIR / "providers.json"
 MAX_CAPTURE_BYTES = 25 * 1024 * 1024
 NO_FORWARD = False
+LOG_ENABLED = False
 LOG_SENSITIVE = False
 REQUEST_TIMEOUT_SECONDS = 600.0
 MAX_RESPONSE_LOG_BYTES = 1024 * 1024
-PROXY_VERSION = "2026-06-29-provider-router-v5-chat-tool-history"
+PROXY_VERSION = "2026-06-29-provider-router-v6-log-toggle"
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -72,6 +73,7 @@ def load_config() -> None:
     global ROUTER_CONFIG_PATH
     global MAX_CAPTURE_BYTES
     global NO_FORWARD
+    global LOG_ENABLED
     global LOG_SENSITIVE
     global REQUEST_TIMEOUT_SECONDS
 
@@ -85,6 +87,7 @@ def load_config() -> None:
         ROUTER_CONFIG_PATH = SCRIPT_DIR / ROUTER_CONFIG_PATH
     MAX_CAPTURE_BYTES = int(os.environ.get("MAX_CAPTURE_BYTES", str(25 * 1024 * 1024)))
     NO_FORWARD = os.environ.get("NO_FORWARD") == "1"
+    LOG_ENABLED = os.environ.get("LOG_ENABLED") == "1"
     LOG_SENSITIVE = os.environ.get("LOG_SENSITIVE") == "1"
     REQUEST_TIMEOUT_SECONDS = float(os.environ.get("REQUEST_TIMEOUT_SECONDS", "600"))
 
@@ -885,6 +888,9 @@ def provider_name(provider: Dict[str, object]) -> str:
 
 
 def save_capture(capture: Dict[str, object]) -> Path:
+    if not LOG_ENABLED:
+        return LOG_DIR / "disabled"
+
     request_dir = LOG_DIR / "requests"
     request_dir.mkdir(parents=True, exist_ok=True)
 
@@ -903,6 +909,9 @@ def save_capture(capture: Dict[str, object]) -> Path:
 
 
 def save_upstream_response(response_log: Dict[str, object]) -> Path:
+    if not LOG_ENABLED:
+        return LOG_DIR / "disabled"
+
     response_dir = LOG_DIR / "responses"
     response_dir.mkdir(parents=True, exist_ok=True)
 
@@ -921,6 +930,9 @@ def save_upstream_response(response_log: Dict[str, object]) -> Path:
 
 
 def save_proxy_error(error: Exception) -> None:
+    if not LOG_ENABLED:
+        return
+
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     error_path = LOG_DIR / "proxy-errors.log"
     entry = {
@@ -933,6 +945,9 @@ def save_proxy_error(error: Exception) -> None:
 
 
 def append_jsonl(path: Path, entry: Dict[str, object]) -> None:
+    if not LOG_ENABLED:
+        return
+
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fp:
         fp.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -964,6 +979,7 @@ def save_boot_log() -> None:
             "logDir": str(LOG_DIR),
             "routerConfig": str(ROUTER_CONFIG_PATH),
             "logSensitive": LOG_SENSITIVE,
+            "logEnabled": LOG_ENABLED,
             "noForward": NO_FORWARD,
             "version": PROXY_VERSION,
         },
@@ -1207,10 +1223,16 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             }
 
             saved_to = save_capture(capture)
-            print(
-                f"[{received_at}] captured {self.command} {incoming.path} "
-                f"for {provider_name(active_provider)} -> {saved_to}"
-            )
+            if LOG_ENABLED:
+                print(
+                    f"[{received_at}] captured {self.command} {incoming.path} "
+                    f"for {provider_name(active_provider)} -> {saved_to}"
+                )
+            else:
+                print(
+                    f"[{received_at}] received {self.command} {incoming.path} "
+                    f"for {provider_name(active_provider)}"
+                )
 
             if NO_FORWARD:
                 send_json(
@@ -1320,7 +1342,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 "bodyPreview": parse_response_preview(bytes(preview), header_value(response_headers, "content-type")),
             }
             response_path = save_upstream_response(response_log)
-            print(f"saved upstream response {upstream_response.status} -> {response_path}")
+            if LOG_ENABLED:
+                print(f"saved upstream response {upstream_response.status} -> {response_path}")
 
         finally:
             connection.close()
@@ -1778,7 +1801,10 @@ def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), CaptureProxyHandler)
     print(f"Codex provider router listening on http://{HOST}:{PORT}")
     print(f"Reading providers from {ROUTER_CONFIG_PATH}")
-    print(f"Writing captures to {LOG_DIR / 'requests'} and {LOG_DIR / 'requests.jsonl'}")
+    if LOG_ENABLED:
+        print(f"Writing captures to {LOG_DIR / 'requests'} and {LOG_DIR / 'requests.jsonl'}")
+    else:
+        print("Persistent request/response logs are disabled.")
     print("Set NO_FORWARD=1 to capture without calling the active provider.")
     server.serve_forever()
 

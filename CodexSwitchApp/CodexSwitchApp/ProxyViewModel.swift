@@ -4,6 +4,7 @@ import SwiftUI
 class ProxyViewModel: ObservableObject {
     @AppStorage("proxyHost") var host = "127.0.0.1"
     @AppStorage("proxyPort") var portString = "8787"
+    @AppStorage("persistentLogsEnabled") var persistentLogsEnabled = false
     @Published var isRunning = false
     @Published var logLines: [String] = []
     @Published var errorMessage: String?
@@ -47,7 +48,8 @@ class ProxyViewModel: ObservableObject {
         let config = ProxyConfig(
             host: host,
             port: port,
-            routerConfigPath: ProviderStore.configURL().path
+            routerConfigPath: ProviderStore.configURL().path,
+            logEnabled: persistentLogsEnabled
         )
 
         do {
@@ -134,6 +136,24 @@ class ProxyViewModel: ObservableObject {
         self.host = host
         self.portString = port
         saveProviders()
+    }
+
+    func updatePersistentLogsEnabled(_ enabled: Bool) {
+        persistentLogsEnabled = enabled
+        statusMessage = enabled ? "Persistent logs enabled" : "Persistent logs disabled"
+        appendLog("[Persistent logs \(enabled ? "enabled" : "disabled")]")
+    }
+
+    func clearLogCache() {
+        errorMessage = nil
+        do {
+            try ProxyProcessManager.clearLogsDirectory()
+            clearLogs()
+            statusMessage = "Log cache cleared"
+            appendLog("[Log cache cleared]")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func configureCodexBaseURL() {

@@ -67,13 +67,18 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) {
             RouterSettingsSheet(
                 host: viewModel.host,
-                port: viewModel.portString
+                port: viewModel.portString,
+                persistentLogsEnabled: viewModel.persistentLogsEnabled
             ) { host, port in
                 viewModel.updateRouterSettings(host: host, port: port)
                 showSettings = false
             } onConfigureCodex: { host, port in
                 viewModel.updateRouterSettings(host: host, port: port)
                 viewModel.configureCodexBaseURL()
+            } onLogToggle: { enabled in
+                viewModel.updatePersistentLogsEnabled(enabled)
+            } onClearLogs: {
+                viewModel.clearLogCache()
             } onCancel: {
                 showSettings = false
             }
@@ -200,21 +205,30 @@ struct ContentView: View {
 struct RouterSettingsSheet: View {
     @State private var host: String
     @State private var port: String
+    @State private var persistentLogsEnabled: Bool
     var onSave: (String, String) -> Void
     var onConfigureCodex: (String, String) -> Void
+    var onLogToggle: (Bool) -> Void
+    var onClearLogs: () -> Void
     var onCancel: () -> Void
 
     init(
         host: String,
         port: String,
+        persistentLogsEnabled: Bool,
         onSave: @escaping (String, String) -> Void,
         onConfigureCodex: @escaping (String, String) -> Void,
+        onLogToggle: @escaping (Bool) -> Void,
+        onClearLogs: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
         _host = State(initialValue: host)
         _port = State(initialValue: port)
+        _persistentLogsEnabled = State(initialValue: persistentLogsEnabled)
         self.onSave = onSave
         self.onConfigureCodex = onConfigureCodex
+        self.onLogToggle = onLogToggle
+        self.onClearLogs = onClearLogs
         self.onCancel = onCancel
     }
 
@@ -239,6 +253,24 @@ struct RouterSettingsSheet: View {
             }
             .buttonStyle(.bordered)
             .help("Update custom base_url in ~/.codex/config.toml")
+
+            Toggle("开启日志", isOn: Binding(
+                get: { persistentLogsEnabled },
+                set: { value in
+                    persistentLogsEnabled = value
+                    onLogToggle(value)
+                }
+            ))
+            .toggleStyle(.checkbox)
+
+            Button {
+                onClearLogs()
+            } label: {
+                Label("清理日志缓存", systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .help("Delete local log files from Application Support")
 
             HStack {
                 Spacer()

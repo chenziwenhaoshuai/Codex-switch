@@ -4,6 +4,7 @@ struct ProxyConfig {
     var host: String
     var port: Int
     var routerConfigPath: String
+    var logEnabled: Bool
 }
 
 class ProxyProcessManager {
@@ -39,6 +40,7 @@ class ProxyProcessManager {
             "PORT": String(config.port),
             "LOG_DIR": logDir.path,
             "ROUTER_CONFIG_PATH": config.routerConfigPath,
+            "LOG_ENABLED": config.logEnabled ? "1" : "0",
             "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
         ]
 
@@ -87,5 +89,14 @@ class ProxyProcessManager {
         let logDir = appSupport.appendingPathComponent("Codex Switch/logs")
         try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
         return logDir
+    }
+
+    static func clearLogsDirectory() throws {
+        let logDir = logsDirectory()
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: logDir.path) {
+            try fileManager.removeItem(at: logDir)
+        }
+        try fileManager.createDirectory(at: logDir, withIntermediateDirectories: true)
     }
 }
