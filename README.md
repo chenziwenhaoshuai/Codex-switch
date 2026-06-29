@@ -43,8 +43,8 @@ Restarting Codex for every provider change breaks flow. Codex Switch keeps Codex
 | 🖥️ Native macOS UI | Built with SwiftUI. |
 | 🔁 Hot provider switching | Switch upstream providers without restarting Codex. |
 | 🔐 Per-provider API key | Each provider has its own local API key. |
-| 🎯 Default model | Set a default model for each provider. |
-| 🧭 Per-provider model mapping | Rewrite incoming `model` values per provider. |
+| 🎯 Default model | Rewrite requests to a provider-specific default model. |
+| 🧭 Per-provider model override | Optionally override the default model with a custom mapped model. |
 | 🧩 Codex config helper | One-click update for Codex `custom` provider `base_url`. |
 | 📜 Local logs | Inspect local routing activity for debugging. |
 | 📦 DMG build script | Reproducible local macOS packaging. |
@@ -142,13 +142,13 @@ Example:
 
 ### 🎯 Model Mapping
 
-When `modelMapping.enabled` is `true`, Codex Switch rewrites the request body's top-level `model` field:
+When `defaultModel` is set, Codex Switch rewrites the request body's top-level `model` field:
 
 ```text
 incoming model -> provider model
 ```
 
-If `targetModel` is empty, Codex Switch falls back to the provider's `defaultModel`.
+If `modelMapping.enabled` is `true`, `modelMapping.targetModel` overrides `defaultModel`. If `targetModel` is empty, Codex Switch falls back to `defaultModel`.
 
 ---
 

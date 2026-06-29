@@ -217,13 +217,11 @@ def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, obj
     if not body or "application/json" not in content_type.lower():
         return body
 
+    default_model = str(provider.get("defaultModel") or "").strip()
     model_mapping = provider.get("modelMapping")
-    if not isinstance(model_mapping, dict) or not model_mapping.get("enabled"):
-        return body
-
-    target_model = str(model_mapping.get("targetModel") or "").strip()
-    if not target_model:
-        target_model = str(provider.get("defaultModel") or "").strip()
+    target_model = default_model
+    if isinstance(model_mapping, dict) and model_mapping.get("enabled"):
+        target_model = str(model_mapping.get("targetModel") or "").strip() or default_model
     if not target_model:
         return body
 

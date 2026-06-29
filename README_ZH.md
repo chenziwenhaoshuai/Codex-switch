@@ -43,8 +43,8 @@ Codex 更适合使用稳定的 API Base URL。
 | 🖥️ 原生 macOS UI | 使用 SwiftUI 构建。 |
 | 🔁 热切换供应商 | 不重启 Codex 即可切换上游 API。 |
 | 🔐 每个供应商独立 API Key | 每个 provider 都有自己的本地 API Key。 |
-| 🎯 默认模型 | 每个 provider 可以设置默认访问模型。 |
-| 🧭 按供应商模型映射 | 不同 provider 可使用不同模型映射策略。 |
+| 🎯 默认模型 | 将请求改写为当前 provider 的默认模型。 |
+| 🧭 按供应商模型覆盖 | 可选：用自定义映射模型覆盖默认模型。 |
 | 🧩 Codex 配置助手 | 一键更新 Codex `custom` provider 的 `base_url`。 |
 | 📜 本地日志 | 方便调试路由请求和响应。 |
 | 📦 DMG 构建脚本 | 可复现地生成 macOS 安装包。 |
@@ -142,13 +142,13 @@ base_url = "http://127.0.0.1:8787/v1"
 
 ### 🎯 模型映射
 
-当 `modelMapping.enabled` 为 `true` 时，Codex Switch 会改写请求体顶层的 `model` 字段：
+当 `defaultModel` 已设置时，Codex Switch 会改写请求体顶层的 `model` 字段：
 
 ```text
 请求模型 -> 供应商模型
 ```
 
-如果 `targetModel` 为空，则回退到该供应商的 `defaultModel`。
+如果 `modelMapping.enabled` 为 `true`，`modelMapping.targetModel` 会覆盖 `defaultModel`。如果 `targetModel` 为空，则回退到该供应商的 `defaultModel`。
 
 ---
 

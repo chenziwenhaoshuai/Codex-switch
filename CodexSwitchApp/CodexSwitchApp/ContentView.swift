@@ -449,7 +449,7 @@ struct ProviderEditSheet: View {
                 TextField("gpt-5", text: $draft.defaultModel)
             }
 
-            Toggle("Map all model requests to default model", isOn: $draft.modelMapping.enabled)
+            Toggle("Use custom mapped model", isOn: $draft.modelMapping.enabled)
                 .toggleStyle(.checkbox)
 
             formRow("Map To") {
