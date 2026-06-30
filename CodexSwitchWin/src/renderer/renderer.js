@@ -95,6 +95,7 @@ function openProviderDialog(provider) {
   $("providerModel").value = provider.defaultModel || "";
   $("providerMapping").checked = Boolean(provider.modelMapping?.enabled);
   $("providerBridge").checked = Boolean(provider.chatCompletionsBridgeEnabled);
+  $("providerWebSearch").checked = Boolean(provider.openRouterWebSearchEnabled);
   $("providerDialog").showModal();
 }
 
@@ -109,7 +110,8 @@ async function saveProvider() {
       enabled: $("providerMapping").checked,
       targetModel: $("providerMapping").checked ? $("providerModel").value.trim() : ""
     },
-    chatCompletionsBridgeEnabled: $("providerBridge").checked
+    chatCompletionsBridgeEnabled: $("providerBridge").checked,
+    openRouterWebSearchEnabled: $("providerWebSearch").checked
   };
   if (!provider.name || !provider.baseURL) {
     showMessage("Name and Base URL are required");

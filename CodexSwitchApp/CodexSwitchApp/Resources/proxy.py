@@ -743,7 +743,21 @@ def custom_tool_to_chat_tool(tool: Dict[str, object]) -> Dict[str, object]:
     return build_custom_tool_chat_tool(custom_tool)
 
 
-def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]]]:
+def openrouter_web_search_tool(tool: Dict[str, object]) -> Dict[str, object]:
+    converted: Dict[str, object] = {"type": "openrouter:web_search"}
+    parameters: Dict[str, object] = {}
+    search_context_size = tool.get("search_context_size")
+    if isinstance(search_context_size, str) and search_context_size:
+        parameters["search_context_size"] = search_context_size
+    if parameters:
+        converted["parameters"] = parameters
+    return converted
+
+
+def responses_tools_to_chat_tools(
+    tools: Any,
+    openrouter_web_search_enabled: bool = False,
+) -> Optional[List[Dict[str, object]]]:
     if not isinstance(tools, list):
         return None
 
@@ -753,6 +767,11 @@ def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]
             continue
 
         tool_type = str(tool.get("type") or "")
+        if tool_type == "web_search":
+            if openrouter_web_search_enabled:
+                chat_tools.append(openrouter_web_search_tool(tool))
+            continue
+
         if tool_type in {"custom", "custom_tool"}:
             chat_tools.append(custom_tool_to_chat_tool(tool))
             continue
@@ -1021,7 +1040,11 @@ def responses_text_format_to_chat_instruction(text_config: Any) -> Optional[str]
     return None
 
 
-def responses_body_to_chat_body(body: bytes, content_type: str) -> bytes:
+def responses_body_to_chat_body(
+    body: bytes,
+    content_type: str,
+    provider: Optional[Dict[str, object]] = None,
+) -> bytes:
     if not body or "application/json" not in content_type.lower():
         return body
 
@@ -1066,7 +1089,10 @@ def responses_body_to_chat_body(body: bytes, content_type: str) -> bytes:
     if isinstance(data.get("tools"), list):
         request_tools.extend(tool for tool in data["tools"] if isinstance(tool, dict))
     request_tools.extend(collect_tool_search_output_tools(data.get("input")))
-    tools = responses_tools_to_chat_tools(request_tools)
+    tools = responses_tools_to_chat_tools(
+        request_tools,
+        bool(provider and provider.get("openRouterWebSearchEnabled") and is_openrouter_provider(provider)),
+    )
     if tools:
         chat_request["tools"] = tools
 
@@ -1710,7 +1736,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             bridge_enabled = provider_uses_chat_bridge(active_provider, self.path, content_type)
             responses_tool_compat = should_use_responses_tool_compat(active_provider, self.path, bridge_enabled)
             if bridge_enabled:
-                upstream_body = responses_body_to_chat_body(rewritten_body, content_type)
+                upstream_body = responses_body_to_chat_body(rewritten_body, content_type, active_provider)
             elif responses_tool_compat:
                 upstream_body = responses_tool_compat_body(rewritten_body, content_type)
             else:

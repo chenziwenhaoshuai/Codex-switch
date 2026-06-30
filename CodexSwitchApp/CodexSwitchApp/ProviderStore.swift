@@ -9,6 +9,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
     var defaultModel: String
     var modelMapping: ModelMappingConfig
     var chatCompletionsBridgeEnabled: Bool
+    var openRouterWebSearchEnabled: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -23,6 +24,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         case defaultModel
         case modelMapping
         case chatCompletionsBridgeEnabled
+        case openRouterWebSearchEnabled
     }
 
     init(
@@ -33,7 +35,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         headers: [String: String],
         defaultModel: String,
         modelMapping: ModelMappingConfig,
-        chatCompletionsBridgeEnabled: Bool
+        chatCompletionsBridgeEnabled: Bool,
+        openRouterWebSearchEnabled: Bool
     ) {
         self.id = id
         self.name = name
@@ -43,6 +46,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         self.defaultModel = defaultModel
         self.modelMapping = modelMapping
         self.chatCompletionsBridgeEnabled = chatCompletionsBridgeEnabled
+        self.openRouterWebSearchEnabled = openRouterWebSearchEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -55,6 +59,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         defaultModel = try container.decodeIfPresent(String.self, forKey: .defaultModel) ?? ""
         modelMapping = try container.decodeIfPresent(ModelMappingConfig.self, forKey: .modelMapping) ?? .disabled()
         chatCompletionsBridgeEnabled = try container.decodeIfPresent(Bool.self, forKey: .chatCompletionsBridgeEnabled) ?? false
+        openRouterWebSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .openRouterWebSearchEnabled) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -67,6 +72,7 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
         try container.encode(defaultModel, forKey: .defaultModel)
         try container.encode(modelMapping, forKey: .modelMapping)
         try container.encode(chatCompletionsBridgeEnabled, forKey: .chatCompletionsBridgeEnabled)
+        try container.encode(openRouterWebSearchEnabled, forKey: .openRouterWebSearchEnabled)
     }
 
     static func blank() -> ProviderConfig {
@@ -78,7 +84,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             headers: [:],
             defaultModel: "",
             modelMapping: .disabled(),
-            chatCompletionsBridgeEnabled: false
+            chatCompletionsBridgeEnabled: false,
+            openRouterWebSearchEnabled: false
         )
     }
 
@@ -91,7 +98,8 @@ struct ProviderConfig: Identifiable, Codable, Equatable {
             headers: [:],
             defaultModel: "",
             modelMapping: .disabled(),
-            chatCompletionsBridgeEnabled: false
+            chatCompletionsBridgeEnabled: false,
+            openRouterWebSearchEnabled: false
         )
     }
 }

@@ -480,6 +480,9 @@ struct ProviderEditSheet: View {
             Toggle("开启chat转response接口", isOn: $draft.chatCompletionsBridgeEnabled)
                 .toggleStyle(.checkbox)
 
+            Toggle("启用Web search（仅适用于OpenRouter）", isOn: $draft.openRouterWebSearchEnabled)
+                .toggleStyle(.checkbox)
+
             HStack {
                 Spacer()
                 Button("Cancel") {

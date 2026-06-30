@@ -484,11 +484,25 @@ function customToolToChatTool(tool) {
   return buildCustomToolChatTool({ ...tool, type: "custom", name: rawName });
 }
 
-function responsesToolsToChatTools(tools) {
+function openRouterWebSearchTool(tool) {
+  const converted = { type: "openrouter:web_search" };
+  const parameters = {};
+  if (typeof tool.search_context_size === "string" && tool.search_context_size) {
+    parameters.search_context_size = tool.search_context_size;
+  }
+  if (Object.keys(parameters).length) converted.parameters = parameters;
+  return converted;
+}
+
+function responsesToolsToChatTools(tools, options = {}) {
   if (!Array.isArray(tools)) return undefined;
   const result = [];
   for (const tool of tools) {
     if (!tool || typeof tool !== "object") continue;
+    if (tool.type === "web_search") {
+      if (options.openRouterWebSearchEnabled) result.push(openRouterWebSearchTool(tool));
+      continue;
+    }
     if (tool.type === "custom" || tool.type === "custom_tool") {
       result.push(customToolToChatTool(tool));
       continue;
@@ -695,7 +709,7 @@ function responsesTextFormatToChatResponseFormat(textConfig) {
   return undefined;
 }
 
-function responseToChatBody(data) {
+function responseToChatBody(data, provider) {
   const body = {
     model: data.model || "",
     messages: responsesInputToMessages(data)
@@ -708,7 +722,9 @@ function responseToChatBody(data) {
   if (data.max_completion_tokens != null) body.max_completion_tokens = data.max_completion_tokens;
   const requestTools = Array.isArray(data.tools) ? data.tools.filter((tool) => tool && typeof tool === "object") : [];
   requestTools.push(...collectToolSearchOutputTools(data.input));
-  const tools = responsesToolsToChatTools(requestTools);
+  const tools = responsesToolsToChatTools(requestTools, {
+    openRouterWebSearchEnabled: Boolean(provider?.openRouterWebSearchEnabled && isOpenRouterProvider(provider))
+  });
   if (tools) body.tools = tools;
   if (data.tool_choice != null) body.tool_choice = responsesToolChoiceToChatToolChoice(data.tool_choice);
   const responseFormat = responsesTextFormatToChatResponseFormat(data.text);
@@ -1282,7 +1298,7 @@ function createProxyServer({ host, port, getConfig, getSettings = () => ({}), ap
       if (isJsonContentType(contentType) && originalBody.length) {
         let requestJson = parseJson(originalBody);
         requestJson = rewriteModel(requestJson, provider);
-        upstreamJson = bridge ? responseToChatBody(requestJson) : (responsesToolCompat ? applyResponsesToolCompat(requestJson) : requestJson);
+        upstreamJson = bridge ? responseToChatBody(requestJson, provider) : (responsesToolCompat ? applyResponsesToolCompat(requestJson) : requestJson);
         upstreamBody = Buffer.from(JSON.stringify(upstreamJson));
       }
 

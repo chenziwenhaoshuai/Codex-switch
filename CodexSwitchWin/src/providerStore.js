@@ -15,7 +15,8 @@ function defaultProvider() {
     headers: {},
     defaultModel: "",
     modelMapping: { enabled: false, targetModel: "" },
-    chatCompletionsBridgeEnabled: false
+    chatCompletionsBridgeEnabled: false,
+    openRouterWebSearchEnabled: false
   };
 }
 
@@ -35,7 +36,8 @@ function normalizeProvider(provider) {
       enabled: mappingEnabled,
       targetModel: mappingEnabled ? defaultModel : String(mapping.targetModel || "")
     },
-    chatCompletionsBridgeEnabled: Boolean(item.chatCompletionsBridgeEnabled)
+    chatCompletionsBridgeEnabled: Boolean(item.chatCompletionsBridgeEnabled),
+    openRouterWebSearchEnabled: Boolean(item.openRouterWebSearchEnabled)
   };
 }
 
