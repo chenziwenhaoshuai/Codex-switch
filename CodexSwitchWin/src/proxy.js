@@ -191,7 +191,7 @@ function namespaceFromChatToolName(name) {
   const value = String(name || "");
   if (!value.startsWith(NAMESPACE_TOOL_FUNCTION_PREFIX)) return null;
   const rest = value.slice(NAMESPACE_TOOL_FUNCTION_PREFIX.length);
-  const separator = rest.indexOf("__");
+  const separator = rest.lastIndexOf("__");
   if (separator < 0) return null;
   return {
     namespace: rest.slice(0, separator),

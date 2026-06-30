@@ -278,7 +278,7 @@ def namespace_from_chat_tool_name(name: object) -> Optional[Dict[str, str]]:
     if not value.startswith(NAMESPACE_TOOL_FUNCTION_PREFIX):
         return None
     rest = value[len(NAMESPACE_TOOL_FUNCTION_PREFIX):]
-    separator = rest.find("__")
+    separator = rest.rfind("__")
     if separator < 0:
         return None
     return {
