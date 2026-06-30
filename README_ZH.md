@@ -339,21 +339,6 @@ npm run build
 
 ---
 
-## 🔒 安全注意事项
-
-发布或分享代码前，请确认这些内容没有被提交：
-
-- 真实 API Key
-- 私有供应商地址
-- 本地 `providers.json`
-- 请求/响应日志
-- 本地 `.env`
-- App 构建产物
-
-文档和截图里请使用占位示例。
-
----
-
 ## 📄 许可证
 
 MIT License。Copyright © 2026 Ziwen.

@@ -339,21 +339,6 @@ npm run build
 
 ---
 
-## 🔒 Safety Notes
-
-Before publishing or sharing changes, check that these are not committed:
-
-- real API keys
-- private provider URLs
-- local `providers.json`
-- request/response logs
-- local `.env`
-- app build outputs
-
-Use placeholders in documentation and screenshots.
-
----
-
 ## 📄 License
 
 MIT License. Copyright © 2026 Ziwen.
