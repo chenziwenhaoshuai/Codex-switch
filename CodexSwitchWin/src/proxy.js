@@ -199,6 +199,17 @@ function namespaceFromChatToolName(name) {
   };
 }
 
+function normalizeApplyPatchInput(input) {
+  let text = String(input ?? "");
+  if (!text.includes("*** Begin Patch")) return text;
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return text.split("\n").map((line) => {
+    if (line.startsWith("*** Edit File: ")) return `*** Update File: ${line.slice("*** Edit File: ".length)}`;
+    if (/^@@\s+-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@\s*$/.test(line)) return "@@";
+    return line;
+  }).join("\n");
+}
+
 function responseFunctionCallToToolCall(item) {
   const id = String(item.call_id || item.id || `call_${cryptoRandom()}`);
   let args = item.arguments == null ? "{}" : item.arguments;
@@ -225,12 +236,13 @@ function responseToolSearchCallToToolCall(item) {
 function responseApplyPatchCallToToolCall(item) {
   const id = String(item.call_id || item.id || `call_${cryptoRandom()}`);
   const operation = item.operation && typeof item.operation === "object" ? item.operation : {};
+  const patchInput = normalizeApplyPatchInput(typeof operation.diff === "string" ? operation.diff : JSON.stringify(operation));
   return {
     id,
     type: "function",
     function: {
       name: APPLY_PATCH_TOOL_NAME,
-      arguments: JSON.stringify({ input: operation.diff || JSON.stringify(operation) })
+      arguments: JSON.stringify({ input: patchInput })
     }
   };
 }
@@ -344,6 +356,23 @@ function responsesInputToMessages(data) {
 function buildCustomToolChatTool(tool) {
   const name = String(tool.name || "custom_tool");
   let description = "Original tool definition:" + "\n```json\n" + JSON.stringify(tool) + "\n```";
+  if (name === APPLY_PATCH_TOOL_NAME) {
+    description += [
+      "",
+      "Codex apply_patch is a raw patch string, not a JSON object and not unified diff.",
+      "Use exactly:",
+      "*** Begin Patch",
+      "*** Add File: path",
+      "+new line",
+      "*** Update File: path",
+      "@@",
+      " unchanged context line",
+      "-old line",
+      "+new line",
+      "*** End Patch",
+      "For Update File, hunk headers must be `@@` or `@@ label`, not `@@ -1,1 +1,1 @@`. Context lines must start with a single space."
+    ].join("\n");
+  }
   return {
     type: "function",
     function: {
@@ -441,13 +470,14 @@ function isToolSearchFunctionName(name) {
 function customToolFunctionToResponseItem(toolCall, fn, args) {
   const callId = String(toolCall.id || toolCall.call_id || `call_${cryptoRandom()}`);
   const name = customToolNameFromFunctionName(fn.name);
+  const input = parseToolInput(args);
   return {
     id: `ctc_${callId}`,
     type: "custom_tool_call",
     status: "completed",
     call_id: callId,
     name,
-    input: parseToolInput(args)
+    input: name === APPLY_PATCH_TOOL_NAME ? normalizeApplyPatchInput(input) : input
   };
 }
 
@@ -620,6 +650,7 @@ function transformResponseItemForToolCompat(item, options = {}) {
   };
   if ("arguments" in next) {
     next.input = parseToolInput(next.arguments);
+    if (name === APPLY_PATCH_TOOL_NAME) next.input = normalizeApplyPatchInput(next.input);
     delete next.arguments;
   } else if (!("input" in next) && options.includeEmptyInput) {
     next.input = "";
@@ -971,6 +1002,8 @@ async function* iterSseEvents(readable) {
   let event = "";
   let dataLines = [];
 
+  const sseFieldValue = (value) => value.startsWith(" ") ? value.slice(1) : value;
+
   const flush = async function* () {
     if (!event && !dataLines.length) return;
     yield { event: event || "message", data: dataLines.join("\n") };
@@ -991,17 +1024,17 @@ async function* iterSseEvents(readable) {
       } else if (line.startsWith(":")) {
         continue;
       } else if (line.startsWith("event:")) {
-        event = line.slice(6).trim();
+        event = sseFieldValue(line.slice(6)).trim();
       } else if (line.startsWith("data:")) {
-        dataLines.push(line.slice(5).trimStart());
+        dataLines.push(sseFieldValue(line.slice(5)));
       }
     }
   }
 
   if (buffer) {
     const line = buffer.replace(/\r$/, "");
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+    if (line.startsWith("event:")) event = sseFieldValue(line.slice(6)).trim();
+    else if (line.startsWith("data:")) dataLines.push(sseFieldValue(line.slice(5)));
   }
   yield* flush();
 }
@@ -1197,6 +1230,7 @@ async function streamChatSseAsResponses(upstreamRes, res, requestModel, options 
     if (sendItem.type === "custom_tool_call") {
       sendItem.name = customToolNameFromFunctionName(sendItem.name);
       sendItem.input = parseToolInput(sendItem.arguments);
+      if (sendItem.name === APPLY_PATCH_TOOL_NAME) sendItem.input = normalizeApplyPatchInput(sendItem.input);
       delete sendItem.arguments;
     } else if (sendItem.type === "tool_search_call") {
       sendItem.name = TOOL_SEARCH_TOOL_NAME;
