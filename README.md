@@ -1,53 +1,54 @@
 # ⚡ Codex Switch
 
-> A native macOS provider switcher for Codex. Keep Codex connected to one local URL, then switch upstream API providers from a tiny desktop app.
+> A local provider switcher for Codex. Keep Codex pointed at one stable local URL, then switch upstream API providers from a small desktop app without restarting Codex.
 
 [中文文档](./README_ZH.md) · [Releases](https://github.com/chenziwenhaoshuai/Codex-switch/releases) · [License](./LICENSE)
 
 ---
 
-## ✨ What Is Codex Switch?
+## ✨ What Is It?
 
 Codex Switch is a local OpenAI-compatible router for Codex.
-
-Instead of changing Codex config every time you want to try another API provider, you point Codex to one local endpoint:
 
 ```text
 Codex -> http://127.0.0.1:8787/v1 -> active provider
 ```
 
-Then you use the macOS app to choose which provider should receive the request.
+Codex keeps using the same local `base_url`. Codex Switch decides which upstream provider receives each request.
+
+This means you can switch between providers, model names, API keys, and chat-only gateways while Codex is still running.
 
 ---
 
-## 💡 Why This Exists
+## 💡 Why It Exists
 
-Codex works best when its API base URL stays stable.
+Codex is happiest when its API configuration stays stable. Real usage is not always that tidy:
 
-But in daily work, it is common to switch between:
+- 🔁 you may switch between multiple third-party gateways
+- 🧪 you may test temporary API keys or trial endpoints
+- 🧭 different providers may require different model names
+- 🔌 some providers expose Chat Completions but not Responses
+- 🛠️ tool calls need compatibility glue across provider formats
 
-- official APIs
-- OpenAI-compatible gateways
-- local or private routing endpoints
-- temporary keys
-- different model names across providers
-
-Restarting Codex for every provider change breaks flow. Codex Switch keeps Codex pointed at a stable local URL and moves provider switching into a small, local macOS app.
+Codex Switch keeps the Codex side simple and moves provider switching into a local app.
 
 ---
 
-## 🚀 Features
+## 🚀 Highlights
 
 | Feature | Description |
 | --- | --- |
-| 🖥️ Native macOS UI | Built with SwiftUI. |
-| 🔁 Hot provider switching | Switch upstream providers without restarting Codex. |
-| 🔐 Per-provider API key | Each provider has its own local API key. |
-| 🎯 Default model | Rewrite requests to a provider-specific default model. |
-| 🧭 Per-provider model override | Optionally override the default model with a custom mapped model. |
-| 🧩 Codex config helper | One-click update for Codex `custom` provider `base_url`. |
-| 📜 Local logs | Inspect local routing activity for debugging. |
-| 📦 DMG build script | Reproducible local macOS packaging. |
+| 🖥️ macOS app | Native SwiftUI app with bundled local Python proxy. |
+| 🪟 Windows app | Electron app with local Node.js proxy and Windows packaging. |
+| 🔁 Hot switching | Click `Use` to switch the active upstream provider without restarting Codex. |
+| 🎯 Per-provider default model | Store the real model name each provider expects. |
+| 🧭 Model mapping | Optionally map every incoming Codex model to the provider default model. |
+| 🔄 Chat-to-Responses bridge | Convert Codex `/v1/responses` requests to `/v1/chat/completions` for chat-only providers. |
+| 🛠️ Tool-call compatibility | Handles custom tools, `apply_patch`, `tool_search`, namespaced tools, and streaming tool calls. |
+| 🧩 Codex config helper | Updates only `[model_providers.custom].base_url`; your provider remains `custom`. |
+| 📜 Optional logs | Request/response captures are toggleable and can be cleared from Settings. |
+| ⚡ Faster forwarding | Avoids unnecessary log parsing when logs are disabled and keeps upstream connections warm where supported. |
+| 🔒 Local-first | Provider config stays on your machine; secrets and logs are ignored by Git. |
 
 ---
 
@@ -56,23 +57,31 @@ Restarting Codex for every provider change breaks flow. Codex Switch keeps Codex
 ```mermaid
 flowchart LR
     A["Codex"] --> B["Codex Switch<br/>127.0.0.1:8787/v1"]
-    B --> C{"Active Provider"}
-    C --> D["Provider A"]
-    C --> E["Provider B"]
-    C --> F["Provider C"]
+    B --> C{"Active provider"}
+    C --> D["Responses provider<br/>/v1/responses"]
+    C --> E["Chat-only provider<br/>/v1/chat/completions"]
+    C --> F["OpenAI-compatible gateway"]
 ```
 
-Codex only sees the local router. Codex Switch reads the currently active provider from local config and forwards each request upstream.
+For providers that support the Responses API, Codex Switch forwards requests directly.
+
+For providers that only support Chat Completions, enable **Chat-to-Responses bridge** in that provider's configuration. Codex Switch will translate the request and response shape locally.
 
 ---
 
-## 📸 App Workflow
+## ⚡ Quick Start
 
-1. Add one or more providers.
-2. Fill in the provider `Base URL` and `API Key`.
-3. Optionally set `Default Model` and model mapping.
-4. Click `Use` to make a provider active.
-5. Keep Codex pointed at `http://127.0.0.1:8787/v1`.
+1. Download the latest build from [GitHub Releases](https://github.com/chenziwenhaoshuai/Codex-switch/releases).
+2. Start Codex Switch.
+3. Add a provider with a safe name, `Base URL`, API key, and default model.
+4. Click `Use` on the provider you want active.
+5. Point Codex to:
+
+```text
+http://127.0.0.1:8787/v1
+```
+
+Codex can keep using the same local URL while you switch upstream providers in the app.
 
 ---
 
@@ -85,15 +94,15 @@ export OPENAI_BASE_URL="http://127.0.0.1:8787/v1"
 codex
 ```
 
-Or open Codex Switch Settings and click:
+Or use the macOS Settings button:
 
 ```text
 Set Codex custom base_url
 ```
 
-That only updates `base_url` under `[model_providers.custom]` in `~/.codex/config.toml`.
+That helper only updates `base_url` under `[model_providers.custom]` in `~/.codex/config.toml`.
 
-It does **not** rename your provider and does **not** replace the rest of your Codex config.
+It does **not** rename your provider. It keeps Codex using `custom`.
 
 Example:
 
@@ -107,107 +116,148 @@ requires_openai_auth = true
 base_url = "http://127.0.0.1:8787/v1"
 ```
 
+Use any safe model name in your Codex config. If model mapping is enabled for the active provider, Codex Switch will rewrite it before forwarding.
+
 ---
 
-## 🧩 Provider Configuration
+## 🧩 Provider Settings
 
-Runtime provider config is stored locally:
+Each provider can have its own routing behavior.
 
-```text
-~/Library/Application Support/Codex Switch/providers.json
-```
+| Setting | What it does |
+| --- | --- |
+| `Name` | Display name in the provider list. |
+| `Base URL` | Upstream OpenAI-compatible endpoint, for example `https://api.example.com/v1`. |
+| `API Key` | Forwarded as `Authorization: Bearer <API Key>`. |
+| `Default Model` | The model name this provider should receive. |
+| `Map all requests to default model` | When enabled, every incoming request model is rewritten to `Default Model`. |
+| `Chat-to-Responses bridge` | Converts Codex Responses requests to Chat Completions for chat-only providers. |
 
-Example:
+Safe example:
 
 ```json
 {
-  "activeProviderId": "openai",
-  "providers": [
-    {
-      "id": "openai",
-      "name": "OpenAI",
-      "baseURL": "https://api.openai.com/v1",
-      "apiKey": "",
-      "headers": {},
-      "defaultModel": "",
-      "modelMapping": {
-        "enabled": false,
-        "targetModel": ""
-      },
-      "chatCompletionsBridgeEnabled": false
-    }
-  ]
+  "name": "Example Provider",
+  "baseURL": "https://api.example.com/v1",
+  "apiKey": "<YOUR_API_KEY>",
+  "defaultModel": "provider-model-name",
+  "modelMapping": {
+    "enabled": true,
+    "targetModel": "provider-model-name"
+  },
+  "chatCompletionsBridgeEnabled": false
 }
 ```
 
-### 🎯 Model Mapping
+---
 
-When `defaultModel` is set, Codex Switch rewrites the request body's top-level `model` field:
+## 🎯 Model Mapping
+
+Model mapping solves this common problem:
 
 ```text
-incoming model -> provider model
+Codex config model: openai/some-model
+Provider expects:    provider-real-model
 ```
 
-If `modelMapping.enabled` is `true`, Codex Switch always maps the incoming `model` to that provider's `defaultModel`, so Codex can keep any model name in `config.toml` while the active provider receives its own configured model.
+When mapping is enabled for the active provider:
 
-### 🔁 Chat Completions Bridge
+```text
+incoming request model -> provider default model
+```
 
-Some providers expose `/v1/chat/completions` but not `/v1/responses`. Enable `chatCompletionsBridgeEnabled` for that provider to let Codex Switch translate Codex's Responses requests into Chat Completions requests and translate the provider response back into a Responses-shaped result.
+So Codex can keep a stable local config while each provider receives the exact model name it supports.
 
 ---
 
-## 🔐 Privacy & Safety
+## 🔄 Chat-to-Responses Bridge
 
-Codex Switch is local-first.
+Codex talks to `/v1/responses`.
 
-This repository intentionally does **not** include:
-
-- real API keys
-- private provider URLs
-- local `providers.json`
-- request/response logs
-- DMG files
-- build output
-
-Provider API keys are stored locally on your machine and forwarded as:
+Some upstream providers only expose `/v1/chat/completions`. For those providers, enable:
 
 ```text
-Authorization: Bearer <API Key>
+Chat-to-Responses bridge
 ```
 
-The `.gitignore` is configured to keep secrets, logs, and build artifacts out of Git.
+Codex Switch will locally convert:
+
+- request input/messages
+- tools and tool choices
+- custom tools
+- `apply_patch`
+- `tool_search`
+- streamed chat deltas
+- final response objects
+
+Direct Responses mode is still preferred when your provider supports it, because it is a shorter and faster path. Use the bridge only for chat-only providers.
+
+---
+
+## 🛠️ Tool-Call Compatibility
+
+Codex relies heavily on tool calls. Codex Switch includes compatibility handling for both direct Responses forwarding and Chat bridge mode:
+
+- 🧰 custom tool calls
+- 🩹 `apply_patch`
+- 🔎 `tool_search`
+- 🧱 namespaced tools
+- 🌊 streaming tool-call deltas
+- 🔁 Chat Completions tool calls converted back into Responses items
+
+This is especially useful for third-party OpenAI-compatible providers that support text generation well but differ in tool-call details.
+
+---
+
+## 📜 Logs & Privacy
+
+Persistent request/response logs are optional.
+
+- ✅ Logs can be enabled or disabled in Settings.
+- 🧹 Log cache can be cleared from Settings.
+- 🔐 API keys are not written into the repository.
+- ⚠️ Logs may contain request/response content and provider URLs, so do not share them publicly.
+
+Local data paths:
+
+| Platform | Data |
+| --- | --- |
+| macOS | `~/Library/Application Support/Codex Switch/providers.json` |
+| macOS logs | `~/Library/Application Support/Codex Switch/logs` |
+| Windows | `%APPDATA%/Codex Switch` |
+
+This repository intentionally ignores local secrets, logs, DMGs, EXEs, and build outputs.
 
 ---
 
 ## 📦 Install
 
-Download the latest DMG from:
+Download from [GitHub Releases](https://github.com/chenziwenhaoshuai/Codex-switch/releases).
 
-[GitHub Releases](https://github.com/chenziwenhaoshuai/Codex-switch/releases)
+Current release assets include:
 
-Then drag `Codex Switch.app` into `/Applications`.
+- 🍎 `Codex.Switch.1.0.2.dmg` for macOS
+- 🪟 `Codex.Switch.Setup.1.0.2.exe` for Windows installer
+- 🧳 `Codex.Switch.1.0.2.exe` for Windows portable usage
 
-> The current local build uses ad-hoc signing. If macOS blocks opening it, right-click the app and choose **Open**.
+On macOS, drag `Codex Switch.app` into `/Applications`.
+
+> Current macOS local builds use ad-hoc signing. If macOS blocks opening it, right-click the app and choose **Open**.
 
 ---
 
 ## 🛠️ Build From Source
 
+### 🍎 macOS
+
 Requirements:
 
 - macOS 13+
-- Swift toolchain
+- Swift toolchain / Xcode command line tools
 - [`create-dmg`](https://github.com/create-dmg/create-dmg)
-
-Install `create-dmg`:
 
 ```sh
 brew install create-dmg
-```
-
-Build:
-
-```sh
 ./scripts/build-dmg.sh
 ```
 
@@ -215,8 +265,29 @@ Output:
 
 ```text
 CodexSwitchApp/build/Codex Switch.app
-CodexSwitchApp/Codex Switch.dmg
+CodexSwitchApp/Codex.Switch.1.0.2.dmg
 ```
+
+### 🪟 Windows
+
+Requirements:
+
+- Node.js
+- npm
+
+```powershell
+cd CodexSwitchWin
+npm install
+npm run build
+```
+
+Output:
+
+```text
+CodexSwitchWin\dist
+```
+
+The repository also includes a GitHub Actions workflow for building Windows EXE artifacts manually.
 
 ---
 
@@ -227,17 +298,28 @@ CodexSwitchApp/
   CodexSwitchApp/
     ContentView.swift            # macOS UI
     ProviderStore.swift          # provider config persistence
-    ProxyProcessManager.swift    # launches bundled Python router
-    Resources/proxy.py           # local HTTP router
-scripts/build-dmg.sh             # local app and DMG build script
+    ProxyProcessManager.swift    # launches bundled Python proxy
+    Resources/proxy.py           # macOS local router
+
+CodexSwitchWin/
+  src/
+    main.js                      # Electron main process
+    providerStore.js             # Windows provider config persistence
+    proxy.js                     # Windows local router
+    renderer/                    # Electron UI
+
+scripts/
+  build-dmg.sh                   # macOS app and DMG build script
+
 providers.example.json           # safe example config
+logo.png                         # app logo source
 ```
 
 ---
 
-## 🧪 Development Notes
+## 🧪 Development Checks
 
-Useful checks:
+Useful local checks:
 
 ```sh
 swiftc -typecheck \
@@ -250,7 +332,25 @@ swiftc -typecheck \
   CodexSwitchApp/CodexSwitchApp/ProxyViewModel.swift
 
 python3 -m py_compile CodexSwitchApp/CodexSwitchApp/Resources/proxy.py
+
+cd CodexSwitchWin
+npm run build
 ```
+
+---
+
+## 🔒 Safety Notes
+
+Before publishing or sharing changes, check that these are not committed:
+
+- real API keys
+- private provider URLs
+- local `providers.json`
+- request/response logs
+- local `.env`
+- app build outputs
+
+Use placeholders in documentation and screenshots.
 
 ---
 
