@@ -28,7 +28,11 @@ LOG_ENABLED = False
 LOG_SENSITIVE = False
 REQUEST_TIMEOUT_SECONDS = 600.0
 MAX_RESPONSE_LOG_BYTES = 1024 * 1024
-PROXY_VERSION = "2026-06-29-provider-router-v6-log-toggle"
+PROXY_VERSION = "2026-06-30-provider-router-v7-tool-bridge"
+APPLY_PATCH_TOOL_NAME = "apply_patch"
+CUSTOM_TOOL_FUNCTION_PREFIX = "custom_tool__"
+NAMESPACE_TOOL_FUNCTION_PREFIX = "namespace__"
+TOOL_SEARCH_TOOL_NAME = "tool_search"
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -251,6 +255,61 @@ def provider_uses_chat_bridge(provider: Dict[str, object], path_and_query: str, 
     return urlsplit(path_and_query).path == "/v1/responses"
 
 
+def sanitize_tool_name(value: object, max_length: int = 64) -> str:
+    name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(value or "tool"))
+    return name[:max_length] or "tool"
+
+
+def namespace_chat_tool_name(namespace: object, name: object) -> str:
+    return sanitize_tool_name(f"{NAMESPACE_TOOL_FUNCTION_PREFIX}{namespace}__{name}")
+
+
+def namespace_from_chat_tool_name(name: object) -> Optional[Dict[str, str]]:
+    value = str(name or "")
+    if not value.startswith(NAMESPACE_TOOL_FUNCTION_PREFIX):
+        return None
+    rest = value[len(NAMESPACE_TOOL_FUNCTION_PREFIX):]
+    separator = rest.find("__")
+    if separator < 0:
+        return None
+    return {
+        "namespace": rest[:separator],
+        "name": rest[separator + 2:],
+    }
+
+
+def parse_tool_input(arguments_text: Any) -> str:
+    raw = arguments_text if isinstance(arguments_text, str) else json.dumps(arguments_text or {}, ensure_ascii=False)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    if isinstance(parsed, dict):
+        if "input" in parsed:
+            return "" if parsed["input"] is None else str(parsed["input"])
+        operation = parsed.get("operation")
+        if isinstance(operation, dict) and "diff" in operation:
+            return "" if operation["diff"] is None else str(operation["diff"])
+        return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
+    return "" if parsed is None else str(parsed)
+
+
+def custom_tool_name_from_function_name(name: object) -> str:
+    value = str(name or "")
+    if value.startswith(CUSTOM_TOOL_FUNCTION_PREFIX):
+        return value[len(CUSTOM_TOOL_FUNCTION_PREFIX):] or "custom_tool"
+    return value or "custom_tool"
+
+
+def is_custom_compat_function_name(name: object) -> bool:
+    value = str(name or "")
+    return value == APPLY_PATCH_TOOL_NAME or value.startswith(CUSTOM_TOOL_FUNCTION_PREFIX)
+
+
+def is_tool_search_function_name(name: object) -> bool:
+    return str(name or "") == TOOL_SEARCH_TOOL_NAME
+
+
 def normalize_text_content(content: Any) -> str:
     if content is None:
         return ""
@@ -376,7 +435,7 @@ def append_chat_message(messages: List[Dict[str, object]], message: Dict[str, ob
 
 def response_function_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[str, object]:
     call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
-    name = str(item.get("name") or "")
+    name = namespace_chat_tool_name(item.get("namespace"), item.get("name")) if item.get("namespace") else str(item.get("name") or "")
     arguments = item.get("arguments", "{}")
     if not isinstance(arguments, str):
         arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
@@ -384,6 +443,57 @@ def response_function_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[st
         "id": call_id,
         "type": "function",
         "function": {"name": name, "arguments": arguments},
+    }
+
+
+def response_tool_search_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
+    arguments = item.get("arguments", "{}")
+    if not isinstance(arguments, str):
+        arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "id": call_id,
+        "type": "function",
+        "function": {"name": TOOL_SEARCH_TOOL_NAME, "arguments": arguments},
+    }
+
+
+def response_apply_patch_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
+    operation = item.get("operation")
+    if not isinstance(operation, dict):
+        operation = {}
+    patch_input = operation.get("diff")
+    if not isinstance(patch_input, str):
+        patch_input = json.dumps(operation, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "id": call_id,
+        "type": "function",
+        "function": {
+            "name": APPLY_PATCH_TOOL_NAME,
+            "arguments": json.dumps({"input": patch_input}, ensure_ascii=False, separators=(",", ":")),
+        },
+    }
+
+
+def response_custom_tool_call_to_chat_tool_call(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("id") or f"call_{uuid.uuid4().hex}")
+    name = sanitize_tool_name(item.get("name") or "custom_tool", 48)
+    tool_input = item.get("input") if "input" in item else item.get("content")
+    return {
+        "id": call_id,
+        "type": "function",
+        "function": {
+            "name": f"{CUSTOM_TOOL_FUNCTION_PREFIX}{name}",
+            "arguments": json.dumps(
+                {
+                    "input": tool_input,
+                    "name": item.get("name") or name,
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+        },
     }
 
 
@@ -450,6 +560,14 @@ def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, 
                 pending_tool_calls.append(response_function_call_to_chat_tool_call(item))
                 continue
 
+            if item_type == "tool_search_call":
+                pending_tool_calls.append(response_tool_search_call_to_chat_tool_call(item))
+                continue
+
+            if item_type == "apply_patch_call":
+                pending_tool_calls.append(response_apply_patch_call_to_chat_tool_call(item))
+                continue
+
             if item_type == "function_call_output":
                 flush_pending_tool_calls()
                 tool_message = function_call_output_to_tool_message(item)
@@ -467,16 +585,39 @@ def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, 
                     )
                 continue
 
-            flush_pending_tool_calls()
+            if item_type == "apply_patch_call_output":
+                flush_pending_tool_calls()
+                tool_message = function_call_output_to_tool_message(item)
+                tool_call_id = str(tool_message.get("tool_call_id") or "")
+                if tool_call_id in known_tool_call_ids:
+                    append_chat_message(messages, tool_message)
+                else:
+                    output = normalize_text_content(item.get("output") if "output" in item else item.get("content"))
+                    append_chat_message(
+                        messages,
+                        {
+                            "role": "user",
+                            "content": f"Apply patch output for `{tool_call_id or 'unknown'}`:\n{output}",
+                        },
+                    )
+                continue
+
             if item_type == "custom_tool_call":
-                append_chat_message(messages, {"role": "assistant", "content": custom_tool_call_to_text(item)})
+                pending_tool_calls.append(response_custom_tool_call_to_chat_tool_call(item))
                 continue
             if item_type == "custom_tool_call_output":
-                append_chat_message(messages, {"role": "user", "content": custom_tool_output_to_text(item)})
+                flush_pending_tool_calls()
+                tool_message = function_call_output_to_tool_message(item)
+                tool_call_id = str(tool_message.get("tool_call_id") or "")
+                if tool_call_id in known_tool_call_ids:
+                    append_chat_message(messages, tool_message)
+                else:
+                    append_chat_message(messages, {"role": "user", "content": custom_tool_output_to_text(item)})
                 continue
             if item_type == "reasoning":
                 continue
 
+            flush_pending_tool_calls()
             for message in response_item_to_chat_messages(item):
                 append_chat_message(messages, message)
 
@@ -487,6 +628,70 @@ def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, 
     return messages
 
 
+def build_custom_tool_chat_tool(tool: Dict[str, object]) -> Dict[str, object]:
+    name = str(tool.get("name") or "custom_tool")
+    description = "Original tool definition:\n```json\n" + json.dumps(tool, ensure_ascii=False) + "\n```"
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "Raw string input for the original custom tool. Preserve formatting exactly and follow the original tool definition embedded in the description.",
+                    },
+                },
+                "required": ["input"],
+            },
+        },
+    }
+
+
+def responses_function_tool_to_chat_tool(tool: Dict[str, object], name_override: Optional[str] = None) -> Optional[Dict[str, object]]:
+    name = name_override or str(tool.get("name") or "")
+    source = tool.get("function")
+    if isinstance(source, dict):
+        name = name_override or str(source.get("name") or name)
+    else:
+        source = tool
+    if not name:
+        return None
+    function: Dict[str, object] = {"name": name}
+    if isinstance(source.get("description"), str):
+        function["description"] = source["description"]
+    if isinstance(source.get("parameters"), dict):
+        function["parameters"] = source["parameters"]
+    if isinstance(source.get("strict"), bool):
+        function["strict"] = source["strict"]
+    return {"type": "function", "function": function}
+
+
+def chat_tool_to_response_tool(chat_tool: Dict[str, object]) -> Dict[str, object]:
+    function = chat_tool.get("function")
+    if not isinstance(function, dict):
+        function = {}
+    result: Dict[str, object] = {
+        "type": "function",
+        "name": str(function.get("name") or ""),
+    }
+    if "description" in function:
+        result["description"] = function["description"]
+    if "parameters" in function:
+        result["parameters"] = function["parameters"]
+    return result
+
+
+def custom_tool_to_chat_tool(tool: Dict[str, object]) -> Dict[str, object]:
+    raw_name = sanitize_tool_name(tool.get("name") or "custom_tool", 48)
+    custom_tool = dict(tool)
+    custom_tool["type"] = "custom"
+    custom_tool["name"] = raw_name
+    return build_custom_tool_chat_tool(custom_tool)
+
+
 def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]]]:
     if not isinstance(tools, list):
         return None
@@ -495,22 +700,48 @@ def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]
     for tool in tools:
         if not isinstance(tool, dict):
             continue
-        if tool.get("type") != "function":
+
+        tool_type = str(tool.get("type") or "")
+        if tool_type in {"custom", "custom_tool"}:
+            chat_tools.append(custom_tool_to_chat_tool(tool))
             continue
+
+        if tool_type == "namespace":
+            namespace = sanitize_tool_name(tool.get("name") or "namespace", 32)
+            nested_tools = tool.get("tools")
+            if not isinstance(nested_tools, list):
+                continue
+            for nested in nested_tools:
+                if not isinstance(nested, dict) or nested.get("type") != "function":
+                    continue
+                nested_name = nested.get("name")
+                nested_function = nested.get("function")
+                if not nested_name and isinstance(nested_function, dict):
+                    nested_name = nested_function.get("name")
+                chat_tool = responses_function_tool_to_chat_tool(
+                    nested,
+                    namespace_chat_tool_name(namespace, nested_name),
+                )
+                if chat_tool:
+                    chat_tools.append(chat_tool)
+            continue
+
+        if tool_type == TOOL_SEARCH_TOOL_NAME:
+            chat_tool = responses_function_tool_to_chat_tool({**tool, "type": "function", "name": TOOL_SEARCH_TOOL_NAME})
+            if chat_tool:
+                chat_tools.append(chat_tool)
+            continue
+
+        if tool_type != "function":
+            continue
+
         if isinstance(tool.get("function"), dict):
             chat_tools.append(tool)
             continue
 
-        function: Dict[str, object] = {"name": str(tool.get("name") or "")}
-        if not function["name"]:
-            continue
-        if isinstance(tool.get("description"), str):
-            function["description"] = tool["description"]
-        if isinstance(tool.get("parameters"), dict):
-            function["parameters"] = tool["parameters"]
-        if isinstance(tool.get("strict"), bool):
-            function["strict"] = tool["strict"]
-        chat_tools.append({"type": "function", "function": function})
+        chat_tool = responses_function_tool_to_chat_tool(tool)
+        if chat_tool:
+            chat_tools.append(chat_tool)
 
     return chat_tools or None
 
@@ -518,6 +749,8 @@ def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]
 def responses_tool_choice_to_chat_tool_choice(tool_choice: Any) -> Any:
     if not isinstance(tool_choice, dict):
         return tool_choice
+    if tool_choice.get("type") in {"apply_patch", "openrouter:apply_patch"}:
+        return {"type": "function", "function": {"name": APPLY_PATCH_TOOL_NAME}}
     if tool_choice.get("type") != "function":
         return tool_choice
     name = tool_choice.get("name")
@@ -526,7 +759,163 @@ def responses_tool_choice_to_chat_tool_choice(tool_choice: Any) -> Any:
     return tool_choice
 
 
-def responses_text_format_to_chat_response_format(text_config: Any) -> Optional[Dict[str, object]]:
+def is_openrouter_provider(provider: Dict[str, object]) -> bool:
+    text = f"{provider.get('id') or ''} {provider.get('name') or ''} {provider.get('baseURL') or ''}"
+    return re.search(r"openrouter", text, re.IGNORECASE) is not None
+
+
+def should_use_responses_tool_compat(provider: Dict[str, object], path_and_query: str, bridge_enabled: bool) -> bool:
+    return (
+        not bridge_enabled
+        and urlsplit(path_and_query).path == "/v1/responses"
+        and is_openrouter_provider(provider)
+    )
+
+
+def responses_tool_to_provider_tool(tool: Any) -> Any:
+    if not isinstance(tool, dict):
+        return tool
+    if tool.get("type") in {"custom", "custom_tool"} and tool.get("name") == APPLY_PATCH_TOOL_NAME:
+        return chat_tool_to_response_tool(custom_tool_to_chat_tool(tool))
+    return tool
+
+
+def responses_tool_choice_to_provider_tool_choice(tool_choice: Any) -> Any:
+    if not isinstance(tool_choice, dict):
+        return tool_choice
+    if tool_choice.get("type") in {"custom", "custom_tool"} and tool_choice.get("name") == APPLY_PATCH_TOOL_NAME:
+        return {"type": "function", "name": APPLY_PATCH_TOOL_NAME}
+    return tool_choice
+
+
+def apply_responses_tool_compat(data: Any) -> Any:
+    if not isinstance(data, dict):
+        return data
+    changed = False
+    next_data = dict(data)
+    tools = data.get("tools")
+    if isinstance(tools, list):
+        converted_tools = []
+        for tool in tools:
+            converted = responses_tool_to_provider_tool(tool)
+            if converted is not tool:
+                changed = True
+            converted_tools.append(converted)
+        if changed:
+            next_data["tools"] = converted_tools
+    if "tool_choice" in data:
+        tool_choice = responses_tool_choice_to_provider_tool_choice(data.get("tool_choice"))
+        if tool_choice is not data.get("tool_choice"):
+            next_data["tool_choice"] = tool_choice
+            changed = True
+    return next_data if changed else data
+
+
+def responses_tool_compat_body(body: bytes, content_type: str) -> bytes:
+    if not body or "application/json" not in content_type.lower():
+        return body
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return body
+    converted = apply_responses_tool_compat(data)
+    if converted is data:
+        return body
+    return json.dumps(converted, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def transform_response_item_for_tool_compat(item: Any, include_empty_input: bool = False) -> Any:
+    if not isinstance(item, dict):
+        return item
+    if item.get("type") != "function_call" or not is_custom_compat_function_name(item.get("name")):
+        return item
+    next_item = dict(item)
+    next_item["id"] = next_item.get("id") or f"ctc_{next_item.get('call_id') or uuid.uuid4().hex}"
+    next_item["type"] = "custom_tool_call"
+    next_item["name"] = custom_tool_name_from_function_name(next_item.get("name"))
+    if "arguments" in next_item:
+        next_item["input"] = parse_tool_input(next_item["arguments"])
+        del next_item["arguments"]
+    elif "input" not in next_item and include_empty_input:
+        next_item["input"] = ""
+    return next_item
+
+
+def transform_responses_json_for_tool_compat(data: Any) -> Any:
+    if not isinstance(data, (dict, list)):
+        return data
+    changed = False
+    next_data: Any = list(data) if isinstance(data, list) else dict(data)
+
+    if isinstance(data, dict):
+        output = data.get("output")
+        if isinstance(output, list):
+            converted_output = []
+            for item in output:
+                converted = transform_response_item_for_tool_compat(item)
+                if converted is not item:
+                    changed = True
+                converted_output.append(converted)
+            next_data["output"] = converted_output
+
+        item = data.get("item")
+        if isinstance(item, dict):
+            converted_item = transform_response_item_for_tool_compat(item, include_empty_input=True)
+            if converted_item is not item:
+                next_data["item"] = converted_item
+                changed = True
+
+        response = data.get("response")
+        if isinstance(response, dict):
+            converted_response = transform_responses_json_for_tool_compat(response)
+            if converted_response is not response:
+                next_data["response"] = converted_response
+                changed = True
+
+    return next_data if changed else data
+
+
+def should_drop_responses_tool_compat_event(event_name: str, payload: Any, custom_tool_item_ids: set) -> bool:
+    payload_type = ""
+    item_id = ""
+    if isinstance(payload, dict):
+        payload_type = str(payload.get("type") or event_name or "")
+        item_id = str(payload.get("item_id") or "")
+    else:
+        payload_type = str(event_name or "")
+    return payload_type.startswith("response.function_call_arguments.") and item_id in custom_tool_item_ids
+
+
+def stream_responses_sse_with_tool_compat(
+    handler: BaseHTTPRequestHandler,
+    upstream_response: http.client.HTTPResponse,
+) -> None:
+    custom_tool_item_ids = set()
+    for event, data_text in iter_sse_events(upstream_response):
+        if data_text.strip() == "[DONE]":
+            handler.wfile.write(b"data: [DONE]\n\n")
+            handler.wfile.flush()
+            continue
+        try:
+            payload = json.loads(data_text)
+        except json.JSONDecodeError:
+            if event and event != "message":
+                handler.wfile.write(f"event: {event}\n".encode("utf-8"))
+            handler.wfile.write(f"data: {data_text}\n\n".encode("utf-8"))
+            handler.wfile.flush()
+            continue
+        item = payload.get("item") if isinstance(payload, dict) else None
+        if isinstance(item, dict) and item.get("type") == "function_call" and is_custom_compat_function_name(item.get("name")):
+            custom_tool_item_ids.add(str(item.get("id") or ""))
+            payload["item"] = transform_response_item_for_tool_compat(item, include_empty_input=True)
+        if should_drop_responses_tool_compat_event(event, payload, custom_tool_item_ids):
+            continue
+        payload = transform_responses_json_for_tool_compat(payload)
+        event_name = str(payload.get("type") or event or "message") if isinstance(payload, dict) else event
+        write_sse_event(handler, event_name, payload)
+
+
+def responses_text_format_to_chat_instruction(text_config: Any) -> Optional[str]:
     if not isinstance(text_config, dict):
         return None
     fmt = text_config.get("format")
@@ -534,13 +923,14 @@ def responses_text_format_to_chat_response_format(text_config: Any) -> Optional[
         return None
     fmt_type = fmt.get("type")
     if fmt_type == "json_schema":
-        response_format = {"type": "json_schema"}
-        json_schema = {key: value for key, value in fmt.items() if key != "type"}
-        if json_schema:
-            response_format["json_schema"] = json_schema
-        return response_format
+        schema_payload = {key: value for key, value in fmt.items() if key != "type"}
+        return (
+            "Return only valid JSON that satisfies this schema. "
+            "Do not wrap the JSON in markdown.\n"
+            + json.dumps(schema_payload, ensure_ascii=False, separators=(",", ":"))
+        )
     if fmt_type == "json_object":
-        return {"type": "json_object"}
+        return "Return only a valid JSON object. Do not wrap the JSON in markdown."
     return None
 
 
@@ -552,9 +942,14 @@ def responses_body_to_chat_body(body: bytes, content_type: str) -> bytes:
     if not isinstance(data, dict):
         return body
 
+    messages = responses_input_to_chat_messages(data)
+    format_instruction = responses_text_format_to_chat_instruction(data.get("text"))
+    if format_instruction:
+        messages.append({"role": "system", "content": format_instruction})
+
     chat_request: Dict[str, object] = {
         "model": data.get("model", ""),
-        "messages": responses_input_to_chat_messages(data),
+        "messages": messages,
     }
 
     if "stream" in data:
@@ -586,10 +981,6 @@ def responses_body_to_chat_body(body: bytes, content_type: str) -> bytes:
 
     if "tool_choice" in data:
         chat_request["tool_choice"] = responses_tool_choice_to_chat_tool_choice(data.get("tool_choice"))
-
-    response_format = responses_text_format_to_chat_response_format(data.get("text"))
-    if response_format:
-        chat_request["response_format"] = response_format
 
     return json_bytes(chat_request)
 
@@ -627,16 +1018,43 @@ def chat_tool_calls_to_response_items(tool_calls: Any) -> List[Dict[str, object]
         arguments = function.get("arguments", "{}")
         if not isinstance(arguments, str):
             arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
-        items.append(
-            {
-                "id": f"fc_{call_id}",
-                "type": "function_call",
-                "status": "completed",
-                "call_id": call_id,
-                "name": str(function.get("name") or ""),
-                "arguments": arguments,
-            }
-        )
+        function_name = str(function.get("name") or "")
+        if is_custom_compat_function_name(function_name):
+            items.append(
+                {
+                    "id": f"ctc_{call_id}",
+                    "type": "custom_tool_call",
+                    "status": "completed",
+                    "call_id": call_id,
+                    "name": custom_tool_name_from_function_name(function_name),
+                    "input": parse_tool_input(arguments),
+                }
+            )
+            continue
+        if is_tool_search_function_name(function_name):
+            items.append(
+                {
+                    "id": f"tsc_{call_id}",
+                    "type": "tool_search_call",
+                    "status": "completed",
+                    "call_id": call_id,
+                    "name": TOOL_SEARCH_TOOL_NAME,
+                    "arguments": arguments,
+                }
+            )
+            continue
+        namespace_info = namespace_from_chat_tool_name(function_name)
+        item = {
+            "id": f"fc_{call_id}",
+            "type": "function_call",
+            "status": "completed",
+            "call_id": call_id,
+            "name": namespace_info["name"] if namespace_info else function_name,
+            "arguments": arguments,
+        }
+        if namespace_info:
+            item["namespace"] = namespace_info["namespace"]
+        items.append(item)
     return items
 
 
@@ -1198,7 +1616,13 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             content_type = self.headers.get("Content-Type", "")
             rewritten_body = rewrite_request_body(body, content_type, active_provider)
             bridge_enabled = provider_uses_chat_bridge(active_provider, self.path, content_type)
-            upstream_body = responses_body_to_chat_body(rewritten_body, content_type) if bridge_enabled else rewritten_body
+            responses_tool_compat = should_use_responses_tool_compat(active_provider, self.path, bridge_enabled)
+            if bridge_enabled:
+                upstream_body = responses_body_to_chat_body(rewritten_body, content_type)
+            elif responses_tool_compat:
+                upstream_body = responses_tool_compat_body(rewritten_body, content_type)
+            else:
+                upstream_body = rewritten_body
             received_at = utc_timestamp()
             incoming_headers = dict(self.headers.items())
 
@@ -1218,7 +1642,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 "upstream": {
                     "baseUrl": active_provider.get("baseURL"),
                     "forwarding": not NO_FORWARD,
-                    "protocolBridge": "responses-to-chat-completions" if bridge_enabled else "none",
+                    "protocolBridge": "responses-to-chat-completions" if bridge_enabled else "responses-tool-compat" if responses_tool_compat else "none",
                 },
             }
 
@@ -1251,7 +1675,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             if bridge_enabled:
                 self.forward_to_chat_completions_bridge(upstream_body, active_provider, rewritten_body)
             else:
-                self.forward_to_upstream(upstream_body, active_provider)
+                self.forward_to_upstream(upstream_body, active_provider, responses_tool_compat)
             elapsed_ms = int((time.time() - started) * 1000)
             if bridge_enabled:
                 print(
@@ -1270,7 +1694,12 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             if not self.wfile.closed:
                 send_json(self, 502, {"ok": False, "error": str(error)})
 
-    def forward_to_upstream(self, body: bytes, provider: Dict[str, object]) -> None:
+    def forward_to_upstream(
+        self,
+        body: bytes,
+        provider: Dict[str, object],
+        responses_tool_compat: bool = False,
+    ) -> None:
         base_parts, target_path = build_upstream_target(self.path, provider)
         port = base_parts.port
         host = base_parts.hostname
@@ -1295,9 +1724,106 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             upstream_response = connection.getresponse()
             upstream_headers_list = upstream_response.getheaders()
             response_headers = response_headers_for_client(upstream_headers_list)
+            response_content_type = header_value(response_headers, "content-type")
             has_content_length = any(name.lower() == "content-length" for name in response_headers)
             preview = bytearray()
             preview_truncated = False
+
+            if self.command == "HEAD":
+                self.send_response(upstream_response.status, upstream_response.reason)
+                for name, value in response_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                return
+
+            if (
+                responses_tool_compat
+                and upstream_response.status < 400
+                and "text/event-stream" in response_content_type.lower()
+            ):
+                self.send_response(upstream_response.status, upstream_response.reason)
+                for name, value in response_headers.items():
+                    if name.lower() == "content-length":
+                        continue
+                    self.send_header(name, value)
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.close_connection = True
+                stream_responses_sse_with_tool_compat(self, upstream_response)
+                response_log = {
+                    "receivedAt": utc_timestamp(),
+                    "method": self.command,
+                    "path": urlsplit(self.path).path,
+                    "query": flatten_query(urlsplit(self.path).query),
+                    "provider": redact_provider(provider),
+                    "upstream": {
+                        "baseUrl": provider.get("baseURL"),
+                        "targetPath": target_path,
+                        "status": upstream_response.status,
+                        "reason": upstream_response.reason,
+                        "protocolBridge": "responses-tool-compat",
+                    },
+                    "headers": redact_headers(dict(upstream_headers_list)),
+                    "bodyPreviewBytes": 0,
+                    "bodyPreviewTruncated": True,
+                    "bodyPreview": "[stream converted for responses tool compatibility]",
+                }
+                response_path = save_upstream_response(response_log)
+                if LOG_ENABLED:
+                    print(f"saved upstream response {upstream_response.status} -> {response_path}")
+                return
+
+            if (
+                responses_tool_compat
+                and upstream_response.status < 400
+                and "application/json" in response_content_type.lower()
+            ):
+                raw_body = upstream_response.read()
+                preview = bytearray(raw_body[:MAX_RESPONSE_LOG_BYTES])
+                preview_truncated = len(raw_body) > len(preview)
+                response_json: Any = None
+                converted_json: Any = None
+                payload = raw_body
+                try:
+                    response_json = json.loads(raw_body.decode("utf-8", errors="replace"))
+                    converted_json = transform_responses_json_for_tool_compat(response_json)
+                    if converted_json is not response_json:
+                        payload = json.dumps(converted_json, ensure_ascii=False, indent=2).encode("utf-8")
+                except json.JSONDecodeError:
+                    converted_json = None
+
+                self.send_response(upstream_response.status, upstream_response.reason)
+                for name, value in response_headers.items():
+                    if name.lower() == "content-length":
+                        continue
+                    self.send_header(name, value)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+                response_log = {
+                    "receivedAt": utc_timestamp(),
+                    "method": self.command,
+                    "path": urlsplit(self.path).path,
+                    "query": flatten_query(urlsplit(self.path).query),
+                    "provider": redact_provider(provider),
+                    "upstream": {
+                        "baseUrl": provider.get("baseURL"),
+                        "targetPath": target_path,
+                        "status": upstream_response.status,
+                        "reason": upstream_response.reason,
+                        "protocolBridge": "responses-tool-compat",
+                    },
+                    "headers": redact_headers(dict(upstream_headers_list)),
+                    "bodyPreviewBytes": len(preview),
+                    "bodyPreviewTruncated": preview_truncated,
+                    "bodyPreview": parse_response_preview(bytes(preview), response_content_type),
+                    "convertedPreview": converted_json if converted_json is not response_json else None,
+                }
+                response_path = save_upstream_response(response_log)
+                if LOG_ENABLED:
+                    print(f"saved upstream response {upstream_response.status} -> {response_path}")
+                return
 
             self.send_response(upstream_response.status, upstream_response.reason)
             for name, value in response_headers.items():
@@ -1306,9 +1832,6 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 self.send_header("Connection", "close")
                 self.close_connection = True
             self.end_headers()
-
-            if self.command == "HEAD":
-                return
 
             while True:
                 chunk = upstream_response.read(8192)
@@ -1339,7 +1862,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 "headers": redact_headers(dict(upstream_headers_list)),
                 "bodyPreviewBytes": len(preview),
                 "bodyPreviewTruncated": preview_truncated,
-                "bodyPreview": parse_response_preview(bytes(preview), header_value(response_headers, "content-type")),
+                "bodyPreview": parse_response_preview(bytes(preview), response_content_type),
             }
             response_path = save_upstream_response(response_log)
             if LOG_ENABLED:
@@ -1606,20 +2129,51 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 "name": str(function.get("name") or ""),
                 "arguments": "",
                 "output_index": next_output_index,
+                "added": False,
             }
             next_output_index += 1
             tool_items[tool_index] = item
-            send_item = {key: value for key, value in item.items() if key != "output_index"}
+            if item["name"]:
+                send_tool_item_added(item)
+            return item
+
+        def normalize_tool_item_type(item: Dict[str, object]) -> None:
+            if item.get("type") != "function_call":
+                return
+            if is_custom_compat_function_name(item.get("name")):
+                item["id"] = f"ctc_{item['call_id']}"
+                item["type"] = "custom_tool_call"
+            elif is_tool_search_function_name(item.get("name")):
+                item["id"] = f"tsc_{item['call_id']}"
+                item["type"] = "tool_search_call"
+
+        def send_tool_item_added(item: Dict[str, object]) -> None:
+            if bool(item.get("added")):
+                return
+            normalize_tool_item_type(item)
+            output_index = int(item["output_index"])
+            send_item = {
+                key: value
+                for key, value in item.items()
+                if key not in {"output_index", "added"}
+            }
+            if send_item.get("type") in {"custom_tool_call", "tool_search_call"}:
+                send_item.pop("arguments", None)
+            if send_item.get("type") == "function_call":
+                namespace_info = namespace_from_chat_tool_name(send_item.get("name"))
+                if namespace_info:
+                    send_item["name"] = namespace_info["name"]
+                    send_item["namespace"] = namespace_info["namespace"]
             write_sse_event(
                 self,
                 "response.output_item.added",
                 {
                     "type": "response.output_item.added",
-                    "output_index": item["output_index"],
+                    "output_index": output_index,
                     "item": send_item,
                 },
             )
-            return item
+            item["added"] = True
 
         for _, data_text in iter_sse_events(upstream_response):
             if data_text.strip() == "[DONE]":
@@ -1672,9 +2226,15 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                         function_delta = {}
                     if not item.get("name") and isinstance(function_delta.get("name"), str):
                         item["name"] = function_delta["name"]
+                    if item.get("name"):
+                        send_tool_item_added(item)
                     arguments_delta = function_delta.get("arguments")
                     if isinstance(arguments_delta, str) and arguments_delta:
                         item["arguments"] = str(item.get("arguments") or "") + arguments_delta
+                        if item.get("type") in {"custom_tool_call", "tool_search_call"}:
+                            continue
+                        if not bool(item.get("added")):
+                            send_tool_item_added(item)
                         write_sse_event(
                             self,
                             "response.function_call_arguments.delta",
@@ -1735,25 +2295,45 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             )
 
         for item in sorted(tool_items.values(), key=lambda value: int(value["output_index"])):
-            send_item = {key: value for key, value in item.items() if key != "output_index"}
+            if not bool(item.get("added")):
+                send_tool_item_added(item)
+            output_index = int(item["output_index"])
+            send_item = {
+                key: value
+                for key, value in item.items()
+                if key not in {"output_index", "added"}
+            }
             send_item["status"] = "completed"
+            if send_item.get("type") == "custom_tool_call":
+                send_item["name"] = custom_tool_name_from_function_name(send_item.get("name"))
+                send_item["input"] = parse_tool_input(send_item.get("arguments"))
+                send_item.pop("arguments", None)
+            elif send_item.get("type") == "tool_search_call":
+                send_item["name"] = TOOL_SEARCH_TOOL_NAME
+                send_item["arguments"] = str(send_item.get("arguments") or "{}")
+            elif send_item.get("type") == "function_call":
+                namespace_info = namespace_from_chat_tool_name(send_item.get("name"))
+                if namespace_info:
+                    send_item["name"] = namespace_info["name"]
+                    send_item["namespace"] = namespace_info["namespace"]
             output.append(send_item)
-            write_sse_event(
-                self,
-                "response.function_call_arguments.done",
-                {
-                    "type": "response.function_call_arguments.done",
-                    "item_id": item["id"],
-                    "output_index": item["output_index"],
-                    "arguments": str(item.get("arguments") or ""),
-                },
-            )
+            if send_item.get("type") not in {"custom_tool_call", "tool_search_call"}:
+                write_sse_event(
+                    self,
+                    "response.function_call_arguments.done",
+                    {
+                        "type": "response.function_call_arguments.done",
+                        "item_id": item["id"],
+                        "output_index": output_index,
+                        "arguments": str(item.get("arguments") or ""),
+                    },
+                )
             write_sse_event(
                 self,
                 "response.output_item.done",
                 {
                     "type": "response.output_item.done",
-                    "output_index": item["output_index"],
+                    "output_index": output_index,
                     "item": send_item,
                 },
             )
