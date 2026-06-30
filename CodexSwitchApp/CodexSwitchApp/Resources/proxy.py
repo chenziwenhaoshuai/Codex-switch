@@ -33,6 +33,7 @@ APPLY_PATCH_TOOL_NAME = "apply_patch"
 CUSTOM_TOOL_FUNCTION_PREFIX = "custom_tool__"
 NAMESPACE_TOOL_FUNCTION_PREFIX = "namespace__"
 TOOL_SEARCH_TOOL_NAME = "tool_search"
+_ROUTER_CONFIG_CACHE: Optional[Tuple[int, int, Dict[str, object], Dict[str, object]]] = None
 
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -190,7 +191,14 @@ def ensure_router_config_exists() -> None:
 
 
 def load_router_config() -> Tuple[Dict[str, object], Dict[str, object]]:
+    global _ROUTER_CONFIG_CACHE
+
     ensure_router_config_exists()
+    stat = ROUTER_CONFIG_PATH.stat()
+    cache_key = (stat.st_mtime_ns, stat.st_size)
+    if _ROUTER_CONFIG_CACHE and _ROUTER_CONFIG_CACHE[:2] == cache_key:
+        return _ROUTER_CONFIG_CACHE[2], _ROUTER_CONFIG_CACHE[3]
+
     try:
         config = json.loads(ROUTER_CONFIG_PATH.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
@@ -214,6 +222,7 @@ def load_router_config() -> Tuple[Dict[str, object], Dict[str, object]]:
         valid_providers[0],
     )
     validate_provider(active_provider)
+    _ROUTER_CONFIG_CACHE = (cache_key[0], cache_key[1], config, active_provider)
     return config, active_provider
 
 
@@ -1624,30 +1633,29 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             else:
                 upstream_body = rewritten_body
             received_at = utc_timestamp()
-            incoming_headers = dict(self.headers.items())
 
-            capture = {
-                "receivedAt": received_at,
-                "method": self.command,
-                "path": incoming.path,
-                "query": flatten_query(incoming.query),
-                "headers": redact_headers(incoming_headers),
-                "bodyBytes": len(body),
-                "bodySha256": hashlib.sha256(body).hexdigest(),
-                "body": parse_body(body, self.headers.get("Content-Type", "")),
-                "upstreamBodyBytes": len(upstream_body),
-                "upstreamBodySha256": hashlib.sha256(upstream_body).hexdigest(),
-                "upstreamBody": parse_body(upstream_body, self.headers.get("Content-Type", "")),
-                "provider": redact_provider(active_provider),
-                "upstream": {
-                    "baseUrl": active_provider.get("baseURL"),
-                    "forwarding": not NO_FORWARD,
-                    "protocolBridge": "responses-to-chat-completions" if bridge_enabled else "responses-tool-compat" if responses_tool_compat else "none",
-                },
-            }
-
-            saved_to = save_capture(capture)
             if LOG_ENABLED:
+                incoming_headers = dict(self.headers.items())
+                capture = {
+                    "receivedAt": received_at,
+                    "method": self.command,
+                    "path": incoming.path,
+                    "query": flatten_query(incoming.query),
+                    "headers": redact_headers(incoming_headers),
+                    "bodyBytes": len(body),
+                    "bodySha256": hashlib.sha256(body).hexdigest(),
+                    "body": parse_body(body, self.headers.get("Content-Type", "")),
+                    "upstreamBodyBytes": len(upstream_body),
+                    "upstreamBodySha256": hashlib.sha256(upstream_body).hexdigest(),
+                    "upstreamBody": parse_body(upstream_body, self.headers.get("Content-Type", "")),
+                    "provider": redact_provider(active_provider),
+                    "upstream": {
+                        "baseUrl": active_provider.get("baseURL"),
+                        "forwarding": not NO_FORWARD,
+                        "protocolBridge": "responses-to-chat-completions" if bridge_enabled else "responses-tool-compat" if responses_tool_compat else "none",
+                    },
+                }
+                saved_to = save_capture(capture)
                 print(
                     f"[{received_at}] captured {self.command} {incoming.path} "
                     f"for {provider_name(active_provider)} -> {saved_to}"
@@ -1659,6 +1667,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 )
 
             if NO_FORWARD:
+                if not LOG_ENABLED:
+                    saved_to = str(LOG_DIR / "disabled")
                 send_json(
                     self,
                     200,
@@ -1726,8 +1736,9 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             response_headers = response_headers_for_client(upstream_headers_list)
             response_content_type = header_value(response_headers, "content-type")
             has_content_length = any(name.lower() == "content-length" for name in response_headers)
-            preview = bytearray()
+            preview = bytearray() if LOG_ENABLED else None
             preview_truncated = False
+            is_event_stream = "text/event-stream" in response_content_type.lower()
 
             if self.command == "HEAD":
                 self.send_response(upstream_response.status, upstream_response.reason)
@@ -1739,7 +1750,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             if (
                 responses_tool_compat
                 and upstream_response.status < 400
-                and "text/event-stream" in response_content_type.lower()
+                and is_event_stream
             ):
                 self.send_response(upstream_response.status, upstream_response.reason)
                 for name, value in response_headers.items():
@@ -1750,26 +1761,26 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.close_connection = True
                 stream_responses_sse_with_tool_compat(self, upstream_response)
-                response_log = {
-                    "receivedAt": utc_timestamp(),
-                    "method": self.command,
-                    "path": urlsplit(self.path).path,
-                    "query": flatten_query(urlsplit(self.path).query),
-                    "provider": redact_provider(provider),
-                    "upstream": {
-                        "baseUrl": provider.get("baseURL"),
-                        "targetPath": target_path,
-                        "status": upstream_response.status,
-                        "reason": upstream_response.reason,
-                        "protocolBridge": "responses-tool-compat",
-                    },
-                    "headers": redact_headers(dict(upstream_headers_list)),
-                    "bodyPreviewBytes": 0,
-                    "bodyPreviewTruncated": True,
-                    "bodyPreview": "[stream converted for responses tool compatibility]",
-                }
-                response_path = save_upstream_response(response_log)
                 if LOG_ENABLED:
+                    response_log = {
+                        "receivedAt": utc_timestamp(),
+                        "method": self.command,
+                        "path": urlsplit(self.path).path,
+                        "query": flatten_query(urlsplit(self.path).query),
+                        "provider": redact_provider(provider),
+                        "upstream": {
+                            "baseUrl": provider.get("baseURL"),
+                            "targetPath": target_path,
+                            "status": upstream_response.status,
+                            "reason": upstream_response.reason,
+                            "protocolBridge": "responses-tool-compat",
+                        },
+                        "headers": redact_headers(dict(upstream_headers_list)),
+                        "bodyPreviewBytes": 0,
+                        "bodyPreviewTruncated": True,
+                        "bodyPreview": "[stream converted for responses tool compatibility]",
+                    }
+                    response_path = save_upstream_response(response_log)
                     print(f"saved upstream response {upstream_response.status} -> {response_path}")
                 return
 
@@ -1779,8 +1790,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 and "application/json" in response_content_type.lower()
             ):
                 raw_body = upstream_response.read()
-                preview = bytearray(raw_body[:MAX_RESPONSE_LOG_BYTES])
-                preview_truncated = len(raw_body) > len(preview)
+                preview = bytearray(raw_body[:MAX_RESPONSE_LOG_BYTES]) if LOG_ENABLED else None
+                preview_truncated = bool(preview is not None and len(raw_body) > len(preview))
                 response_json: Any = None
                 converted_json: Any = None
                 payload = raw_body
@@ -1801,16 +1812,17 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(payload)
 
-                response_log = {
-                    "receivedAt": utc_timestamp(),
-                    "method": self.command,
-                    "path": urlsplit(self.path).path,
-                    "query": flatten_query(urlsplit(self.path).query),
-                    "provider": redact_provider(provider),
-                    "upstream": {
-                        "baseUrl": provider.get("baseURL"),
-                        "targetPath": target_path,
-                        "status": upstream_response.status,
+                if LOG_ENABLED:
+                    response_log = {
+                        "receivedAt": utc_timestamp(),
+                        "method": self.command,
+                        "path": urlsplit(self.path).path,
+                        "query": flatten_query(urlsplit(self.path).query),
+                        "provider": redact_provider(provider),
+                        "upstream": {
+                            "baseUrl": provider.get("baseURL"),
+                            "targetPath": target_path,
+                            "status": upstream_response.status,
                         "reason": upstream_response.reason,
                         "protocolBridge": "responses-tool-compat",
                     },
@@ -1819,9 +1831,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                     "bodyPreviewTruncated": preview_truncated,
                     "bodyPreview": parse_response_preview(bytes(preview), response_content_type),
                     "convertedPreview": converted_json if converted_json is not response_json else None,
-                }
-                response_path = save_upstream_response(response_log)
-                if LOG_ENABLED:
+                    }
+                    response_path = save_upstream_response(response_log)
                     print(f"saved upstream response {upstream_response.status} -> {response_path}")
                 return
 
@@ -1837,35 +1848,37 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 chunk = upstream_response.read(8192)
                 if not chunk:
                     break
-                remaining_preview_bytes = MAX_RESPONSE_LOG_BYTES - len(preview)
-                if remaining_preview_bytes > 0:
-                    preview.extend(chunk[:remaining_preview_bytes])
-                    if len(chunk) > remaining_preview_bytes:
+                if preview is not None:
+                    remaining_preview_bytes = MAX_RESPONSE_LOG_BYTES - len(preview)
+                    if remaining_preview_bytes > 0:
+                        preview.extend(chunk[:remaining_preview_bytes])
+                        if len(chunk) > remaining_preview_bytes:
+                            preview_truncated = True
+                    else:
                         preview_truncated = True
-                else:
-                    preview_truncated = True
                 self.wfile.write(chunk)
-                self.wfile.flush()
+                if is_event_stream:
+                    self.wfile.flush()
 
-            response_log = {
-                "receivedAt": utc_timestamp(),
-                "method": self.command,
-                "path": urlsplit(self.path).path,
-                "query": flatten_query(urlsplit(self.path).query),
-                "provider": redact_provider(provider),
-                "upstream": {
-                    "baseUrl": provider.get("baseURL"),
-                    "targetPath": target_path,
-                    "status": upstream_response.status,
-                    "reason": upstream_response.reason,
-                },
-                "headers": redact_headers(dict(upstream_headers_list)),
-                "bodyPreviewBytes": len(preview),
-                "bodyPreviewTruncated": preview_truncated,
-                "bodyPreview": parse_response_preview(bytes(preview), response_content_type),
-            }
-            response_path = save_upstream_response(response_log)
-            if LOG_ENABLED:
+            if LOG_ENABLED and preview is not None:
+                response_log = {
+                    "receivedAt": utc_timestamp(),
+                    "method": self.command,
+                    "path": urlsplit(self.path).path,
+                    "query": flatten_query(urlsplit(self.path).query),
+                    "provider": redact_provider(provider),
+                    "upstream": {
+                        "baseUrl": provider.get("baseURL"),
+                        "targetPath": target_path,
+                        "status": upstream_response.status,
+                        "reason": upstream_response.reason,
+                    },
+                    "headers": redact_headers(dict(upstream_headers_list)),
+                    "bodyPreviewBytes": len(preview),
+                    "bodyPreviewTruncated": preview_truncated,
+                    "bodyPreview": parse_response_preview(bytes(preview), response_content_type),
+                }
+                response_path = save_upstream_response(response_log)
                 print(f"saved upstream response {upstream_response.status} -> {response_path}")
 
         finally:
@@ -1935,7 +1948,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                         target_path,
                         request_model,
                     )
-                    save_upstream_response(response_log)
+                    if LOG_ENABLED and response_log:
+                        save_upstream_response(response_log)
                 else:
                     raw_body = upstream_response.read()
                     chat_json = json.loads(raw_body.decode("utf-8", errors="replace"))
@@ -1943,17 +1957,18 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                         raise ValueError("Chat bridge upstream response was not a JSON object")
                     response = chat_response_to_responses(chat_json, request_model)
                     emit_response_as_sse(self, response)
-                    save_upstream_response(
-                        self.bridge_response_log(
-                            provider,
-                            target_path,
-                            upstream_response.status,
-                            upstream_response.reason,
-                            upstream_headers_list,
-                            raw_body,
-                            response,
+                    if LOG_ENABLED:
+                        save_upstream_response(
+                            self.bridge_response_log(
+                                provider,
+                                target_path,
+                                upstream_response.status,
+                                upstream_response.reason,
+                                upstream_headers_list,
+                                raw_body,
+                                response,
+                            )
                         )
-                    )
                 return
 
             raw_body = upstream_response.read()
@@ -1970,17 +1985,18 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             if self.command != "HEAD":
                 self.wfile.write(payload)
 
-            save_upstream_response(
-                self.bridge_response_log(
-                    provider,
-                    target_path,
-                    upstream_response.status,
-                    upstream_response.reason,
-                    upstream_headers_list,
-                    raw_body,
-                    response,
+            if LOG_ENABLED:
+                save_upstream_response(
+                    self.bridge_response_log(
+                        provider,
+                        target_path,
+                        upstream_response.status,
+                        upstream_response.reason,
+                        upstream_headers_list,
+                        raw_body,
+                        response,
+                    )
                 )
-            )
 
         finally:
             connection.close()
@@ -2004,17 +2020,18 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(raw_body)
 
-        save_upstream_response(
-            self.bridge_response_log(
-                provider,
-                target_path,
-                upstream_response.status,
-                upstream_response.reason,
-                upstream_headers_list,
-                raw_body,
-                None,
+        if LOG_ENABLED:
+            save_upstream_response(
+                self.bridge_response_log(
+                    provider,
+                    target_path,
+                    upstream_response.status,
+                    upstream_response.reason,
+                    upstream_headers_list,
+                    raw_body,
+                    None,
+                )
             )
-        )
 
     def bridge_response_log(
         self,
@@ -2053,7 +2070,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
         provider: Dict[str, object],
         target_path: str,
         request_model: str,
-    ) -> Dict[str, object]:
+    ) -> Optional[Dict[str, object]]:
         response_id = f"resp_{uuid.uuid4().hex}"
         created_at = int(time.time())
         model = request_model or "unknown"
@@ -2351,6 +2368,9 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 "response": completed_response,
             },
         )
+
+        if not LOG_ENABLED:
+            return None
 
         return {
             "receivedAt": utc_timestamp(),
