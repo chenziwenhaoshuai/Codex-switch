@@ -321,6 +321,14 @@ function responsesInputToMessages(data) {
         else appendMessage(messages, { role: "user", content: `Custom tool output for \`${callId || "unknown"}\`:\n${output}` });
         continue;
       }
+      if (type === "tool_search_output") {
+        flush();
+        const callId = String(item.call_id || item.tool_call_id || item.id || "");
+        const output = JSON.stringify(item);
+        if (known.has(callId)) appendMessage(messages, { role: "tool", tool_call_id: callId, content: output });
+        else appendMessage(messages, { role: "user", content: `Tool search output for \`${callId || "unknown"}\`:\n${output}` });
+        continue;
+      }
       if (type === "reasoning") continue;
       let role = String(item.role || "user");
       if (role === "developer") role = "system";
@@ -510,7 +518,42 @@ function responsesToolsToChatTools(tools) {
     const chatTool = responsesFunctionToolToChatTool(tool);
     if (chatTool) result.push(chatTool);
   }
-  return result.length ? result : undefined;
+  const deduped = dedupeChatTools(result);
+  return deduped.length ? deduped : undefined;
+}
+
+function dedupeChatTools(tools) {
+  const seen = new Set();
+  const deduped = [];
+  for (const tool of tools) {
+    const name = tool?.function?.name;
+    const key = name ? String(name) : JSON.stringify(tool);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(tool);
+  }
+  return deduped;
+}
+
+function collectToolSearchOutputTools(value) {
+  const collected = [];
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+    if (!node || typeof node !== "object") return;
+    if (node.type === "tool_search_output" && Array.isArray(node.tools)) {
+      for (const tool of node.tools) {
+        if (tool && typeof tool === "object") collected.push(tool);
+      }
+    }
+    for (const [key, child] of Object.entries(node)) {
+      if (key !== "tools") walk(child);
+    }
+  };
+  walk(value);
+  return collected;
 }
 
 function responsesToolToProviderTool(tool) {
@@ -663,7 +706,9 @@ function responseToChatBody(data) {
   }
   if (data.max_output_tokens != null) body.max_tokens = data.max_output_tokens;
   if (data.max_completion_tokens != null) body.max_completion_tokens = data.max_completion_tokens;
-  const tools = responsesToolsToChatTools(data.tools);
+  const requestTools = Array.isArray(data.tools) ? data.tools.filter((tool) => tool && typeof tool === "object") : [];
+  requestTools.push(...collectToolSearchOutputTools(data.input));
+  const tools = responsesToolsToChatTools(requestTools);
   if (tools) body.tools = tools;
   if (data.tool_choice != null) body.tool_choice = responsesToolChoiceToChatToolChoice(data.tool_choice);
   const responseFormat = responsesTextFormatToChatResponseFormat(data.text);

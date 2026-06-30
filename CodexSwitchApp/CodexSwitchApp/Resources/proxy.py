@@ -546,6 +546,20 @@ def custom_tool_output_to_text(item: Dict[str, object]) -> str:
     return f"Custom tool output for `{call_id}`:\n{output}"
 
 
+def tool_search_output_to_tool_message(item: Dict[str, object]) -> Dict[str, object]:
+    call_id = str(item.get("call_id") or item.get("tool_call_id") or item.get("id") or "")
+    content = json.dumps(item, ensure_ascii=False, separators=(",", ":"))
+    message: Dict[str, object] = {"role": "tool", "content": content}
+    if call_id:
+        message["tool_call_id"] = call_id
+    return message
+
+
+def tool_search_output_to_text(item: Dict[str, object]) -> str:
+    call_id = str(item.get("call_id") or item.get("id") or "unknown")
+    return f"Tool search output for `{call_id}`:\n{json.dumps(item, ensure_ascii=False, separators=(',', ':'))}"
+
+
 def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, object]]:
     messages: List[Dict[str, object]] = []
     instructions = data.get("instructions")
@@ -640,6 +654,17 @@ def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, 
                 else:
                     append_chat_message(messages, {"role": "user", "content": custom_tool_output_to_text(item)})
                 continue
+
+            if item_type == "tool_search_output":
+                flush_pending_tool_calls()
+                tool_message = tool_search_output_to_tool_message(item)
+                tool_call_id = str(tool_message.get("tool_call_id") or "")
+                if tool_call_id in known_tool_call_ids:
+                    append_chat_message(messages, tool_message)
+                else:
+                    append_chat_message(messages, {"role": "user", "content": tool_search_output_to_text(item)})
+                continue
+
             if item_type == "reasoning":
                 continue
 
@@ -769,7 +794,43 @@ def responses_tools_to_chat_tools(tools: Any) -> Optional[List[Dict[str, object]
         if chat_tool:
             chat_tools.append(chat_tool)
 
-    return chat_tools or None
+    return dedupe_chat_tools(chat_tools) or None
+
+
+def dedupe_chat_tools(tools: List[Dict[str, object]]) -> List[Dict[str, object]]:
+    seen = set()
+    deduped: List[Dict[str, object]] = []
+    for tool in tools:
+        function = tool.get("function")
+        name = function.get("name") if isinstance(function, dict) else None
+        key = str(name) if name else json.dumps(tool, sort_keys=True, ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(tool)
+    return deduped
+
+
+def collect_tool_search_output_tools(value: Any) -> List[Dict[str, object]]:
+    collected: List[Dict[str, object]] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "tool_search_output":
+            tools = node.get("tools")
+            if isinstance(tools, list):
+                collected.extend(tool for tool in tools if isinstance(tool, dict))
+        for key, child in node.items():
+            if key != "tools":
+                walk(child)
+
+    walk(value)
+    return collected
 
 
 def responses_tool_choice_to_chat_tool_choice(tool_choice: Any) -> Any:
@@ -1001,7 +1062,11 @@ def responses_body_to_chat_body(body: bytes, content_type: str) -> bytes:
     if data.get("max_completion_tokens") is not None:
         chat_request["max_completion_tokens"] = data["max_completion_tokens"]
 
-    tools = responses_tools_to_chat_tools(data.get("tools"))
+    request_tools: List[Dict[str, object]] = []
+    if isinstance(data.get("tools"), list):
+        request_tools.extend(tool for tool in data["tools"] if isinstance(tool, dict))
+    request_tools.extend(collect_tool_search_output_tools(data.get("input")))
+    tools = responses_tools_to_chat_tools(request_tools)
     if tools:
         chat_request["tools"] = tools
 
