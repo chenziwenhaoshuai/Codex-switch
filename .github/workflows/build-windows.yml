@@ -2,6 +2,19 @@ name: Build Windows EXE
 
 on:
   workflow_dispatch:
+    inputs:
+      upload_to_release:
+        description: "Upload built EXE files to a GitHub Release"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      release_tag:
+        description: "Release tag to upload to when upload_to_release is true"
+        required: false
+        default: "v1.0.2"
   push:
     tags:
       - "v*"
@@ -40,9 +53,10 @@ jobs:
             CodexSwitchWin/dist/*.exe
 
       - name: Upload EXE to Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.upload_to_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: |
             CodexSwitchWin/dist/*.exe
         env:
