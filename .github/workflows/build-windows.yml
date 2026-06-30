@@ -2,6 +2,12 @@ name: Build Windows EXE
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -11,14 +17,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: CodexSwitchWin/package-lock.json
 
       - name: Install
         working-directory: CodexSwitchWin
-        run: npm install
+        run: npm ci
 
       - name: Build EXE
         working-directory: CodexSwitchWin
@@ -30,3 +38,12 @@ jobs:
           name: Codex.Switch.Windows
           path: |
             CodexSwitchWin/dist/*.exe
+
+      - name: Upload EXE to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CodexSwitchWin/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
