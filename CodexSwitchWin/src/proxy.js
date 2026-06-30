@@ -401,6 +401,20 @@ function parseToolInput(argumentsText) {
   }
 }
 
+function parseToolArgumentsObject(argumentsText) {
+  if (argumentsText && typeof argumentsText === "object" && !Array.isArray(argumentsText)) return argumentsText;
+  if (argumentsText == null) return {};
+  const raw = typeof argumentsText === "string" ? argumentsText : JSON.stringify(argumentsText);
+  if (!String(raw).trim()) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    return { query: parsed == null ? "" : String(parsed) };
+  } catch {
+    return { query: String(raw) };
+  }
+}
+
 function customToolNameFromFunctionName(name) {
   const value = String(name || "");
   if (value.startsWith(CUSTOM_TOOL_FUNCTION_PREFIX)) return value.slice(CUSTOM_TOOL_FUNCTION_PREFIX.length) || "custom_tool";
@@ -452,7 +466,8 @@ function toolSearchFunctionToResponseItem(toolCall, fn, args) {
     status: "completed",
     call_id: callId,
     name: TOOL_SEARCH_TOOL_NAME,
-    arguments: args
+    execution: "client",
+    arguments: parseToolArgumentsObject(args)
   };
 }
 
@@ -1003,6 +1018,7 @@ async function streamChatSseAsResponses(upstreamRes, res, requestModel, options 
     } else if (isToolSearchFunctionName(item.name)) {
       item.id = `tsc_${item.call_id}`;
       item.type = "tool_search_call";
+      item.execution = "client";
     }
   };
 
@@ -1123,7 +1139,8 @@ async function streamChatSseAsResponses(upstreamRes, res, requestModel, options 
       delete sendItem.arguments;
     } else if (sendItem.type === "tool_search_call") {
       sendItem.name = TOOL_SEARCH_TOOL_NAME;
-      sendItem.arguments = String(sendItem.arguments || "{}");
+      sendItem.execution = "client";
+      sendItem.arguments = parseToolArgumentsObject(sendItem.arguments);
     } else if (sendItem.type === "function_call") {
       const namespaceInfo = namespaceFromChatToolName(sendItem.name);
       if (namespaceInfo) {

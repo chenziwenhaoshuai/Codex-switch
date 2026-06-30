@@ -303,6 +303,23 @@ def parse_tool_input(arguments_text: Any) -> str:
     return "" if parsed is None else str(parsed)
 
 
+def parse_tool_arguments_object(arguments_text: Any) -> Dict[str, object]:
+    if isinstance(arguments_text, dict):
+        return arguments_text
+    if arguments_text is None:
+        return {}
+    raw = arguments_text if isinstance(arguments_text, str) else json.dumps(arguments_text, ensure_ascii=False)
+    if not str(raw).strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"query": str(raw)}
+    if isinstance(parsed, dict):
+        return parsed
+    return {"query": "" if parsed is None else str(parsed)}
+
+
 def custom_tool_name_from_function_name(name: object) -> str:
     value = str(name or "")
     if value.startswith(CUSTOM_TOOL_FUNCTION_PREFIX):
@@ -1048,7 +1065,8 @@ def chat_tool_calls_to_response_items(tool_calls: Any) -> List[Dict[str, object]
                     "status": "completed",
                     "call_id": call_id,
                     "name": TOOL_SEARCH_TOOL_NAME,
-                    "arguments": arguments,
+                    "execution": "client",
+                    "arguments": parse_tool_arguments_object(arguments),
                 }
             )
             continue
@@ -2163,6 +2181,7 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             elif is_tool_search_function_name(item.get("name")):
                 item["id"] = f"tsc_{item['call_id']}"
                 item["type"] = "tool_search_call"
+                item["execution"] = "client"
 
         def send_tool_item_added(item: Dict[str, object]) -> None:
             if bool(item.get("added")):
@@ -2327,7 +2346,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 send_item.pop("arguments", None)
             elif send_item.get("type") == "tool_search_call":
                 send_item["name"] = TOOL_SEARCH_TOOL_NAME
-                send_item["arguments"] = str(send_item.get("arguments") or "{}")
+                send_item["execution"] = "client"
+                send_item["arguments"] = parse_tool_arguments_object(send_item.get("arguments"))
             elif send_item.get("type") == "function_call":
                 namespace_info = namespace_from_chat_tool_name(send_item.get("name"))
                 if namespace_info:
