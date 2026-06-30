@@ -27,6 +27,8 @@ const SENSITIVE_HEADERS = new Set([
   "x-goog-api-key"
 ]);
 const MAX_LOG_PREVIEW_BYTES = 1024 * 1024;
+const HTTP_AGENT = new http.Agent({ keepAlive: true });
+const HTTPS_AGENT = new https.Agent({ keepAlive: true });
 
 function jsonResponse(res, statusCode, data) {
   const body = Buffer.from(JSON.stringify(data, null, 2));
@@ -735,7 +737,8 @@ function buildTarget(baseURL, incomingPath) {
 function requestUpstream(target, method, headers, body) {
   return new Promise((resolve, reject) => {
     const client = target.protocol === "https:" ? https : http;
-    const req = client.request(target, { method, headers }, (res) => {
+    const agent = target.protocol === "https:" ? HTTPS_AGENT : HTTP_AGENT;
+    const req = client.request(target, { method, headers, agent }, (res) => {
       const chunks = [];
       res.on("data", (chunk) => chunks.push(chunk));
       res.on("end", () => resolve({ statusCode: res.statusCode || 500, headers: res.headers, body: Buffer.concat(chunks) }));
@@ -750,7 +753,8 @@ function requestUpstream(target, method, headers, body) {
 function streamUpstream(target, method, headers, body, onResponse) {
   return new Promise((resolve, reject) => {
     const client = target.protocol === "https:" ? https : http;
-    const req = client.request(target, { method, headers }, async (upstreamRes) => {
+    const agent = target.protocol === "https:" ? HTTPS_AGENT : HTTP_AGENT;
+    const req = client.request(target, { method, headers, agent }, async (upstreamRes) => {
       try {
         await onResponse(upstreamRes);
         resolve();
@@ -926,7 +930,8 @@ async function* iterSseEvents(readable) {
   yield* flush();
 }
 
-async function streamChatSseAsResponses(upstreamRes, res, requestModel) {
+async function streamChatSseAsResponses(upstreamRes, res, requestModel, options = {}) {
+  const includePreview = Boolean(options.includePreview);
   const responseId = `resp_${cryptoRandom()}`;
   const createdAt = Math.floor(Date.now() / 1000);
   let model = requestModel || "unknown";
@@ -1164,7 +1169,7 @@ async function streamChatSseAsResponses(upstreamRes, res, requestModel) {
     type: "response.completed",
     response: completedResponse
   });
-  return completedResponse;
+  return includePreview ? completedResponse : null;
 }
 
 function upstreamHeaders(req, provider, bodyLength) {
@@ -1274,7 +1279,7 @@ function createProxyServer({ host, port, getConfig, getSettings = () => ({}), ap
 
           const contentType = headerValue(upstreamRes.headers, "content-type");
           if (contentType.toLowerCase().includes("text/event-stream")) {
-            const converted = await streamChatSseAsResponses(upstreamRes, res, upstreamJson.model);
+            const converted = await streamChatSseAsResponses(upstreamRes, res, upstreamJson.model, { includePreview: logEnabled });
             if (logEnabled) {
               saveJsonLog(appDir, "responses", {
                 receivedAt: utcTimestamp(),
