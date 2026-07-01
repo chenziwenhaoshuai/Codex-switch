@@ -23,6 +23,7 @@ build/
 *.jpg
 *.jpeg
 *.gif
+!CodexSwitchWin/src/tray-icon.png
 !logo.png
 
 # IDE/editor state
