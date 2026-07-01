@@ -226,9 +226,37 @@ def load_router_config() -> Tuple[Dict[str, object], Dict[str, object]]:
     return config, active_provider
 
 
+def provider_text(provider: Dict[str, object]) -> str:
+    return f"{provider.get('id') or ''} {provider.get('name') or ''} {provider.get('baseURL') or ''}"
+
+
+def is_aicolate_provider(provider: Dict[str, object]) -> bool:
+    return re.search(r"aicolate|tiktok-row\.net/ai-gateway/openai", provider_text(provider), re.IGNORECASE) is not None
+
+
+def normalize_request_reasoning_for_provider(data: Dict[str, object], provider: Dict[str, object]) -> bool:
+    reasoning = data.get("reasoning")
+    if not isinstance(reasoning, dict):
+        return False
+    if is_aicolate_provider(provider) and reasoning.get("effort") == "max":
+        data["reasoning"] = {**reasoning, "effort": "xhigh"}
+        return True
+    return False
+
+
 def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, object]) -> bytes:
     if not body or "application/json" not in content_type.lower():
         return body
+
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return body
+
+    if not isinstance(data, dict):
+        return body
+
+    changed = normalize_request_reasoning_for_provider(data, provider)
 
     default_model = str(provider.get("defaultModel") or "").strip()
     model_mapping = provider.get("modelMapping")
@@ -237,18 +265,12 @@ def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, obj
         target_model = default_model or str(model_mapping.get("targetModel") or "").strip()
     else:
         target_model = default_model
-    if not target_model:
-        return body
+    if target_model and "model" in data and data.get("model") != target_model:
+        data["model"] = target_model
+        changed = True
 
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
+    if not changed:
         return body
-
-    if not isinstance(data, dict) or "model" not in data:
-        return body
-
-    data["model"] = target_model
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
@@ -901,8 +923,7 @@ def responses_tool_choice_to_chat_tool_choice(tool_choice: Any) -> Any:
 
 
 def is_openrouter_provider(provider: Dict[str, object]) -> bool:
-    text = f"{provider.get('id') or ''} {provider.get('name') or ''} {provider.get('baseURL') or ''}"
-    return re.search(r"openrouter", text, re.IGNORECASE) is not None
+    return re.search(r"openrouter", provider_text(provider), re.IGNORECASE) is not None
 
 
 def should_use_responses_tool_compat(provider: Dict[str, object], path_and_query: str, bridge_enabled: bool) -> bool:

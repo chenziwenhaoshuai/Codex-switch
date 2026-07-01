@@ -110,12 +110,30 @@ function activeProvider(config) {
   return providers.find((provider) => provider.id === config.activeProviderId) || providers[0];
 }
 
+function providerText(provider) {
+  return `${provider?.id || ""} ${provider?.name || ""} ${provider?.baseURL || ""}`;
+}
+
+function isAicolateProvider(provider) {
+  return /aicolate|tiktok-row\.net\/ai-gateway\/openai/i.test(providerText(provider));
+}
+
+function normalizeReasoningForProvider(data, provider) {
+  if (!data || typeof data !== "object") return data;
+  const reasoning = data.reasoning && typeof data.reasoning === "object" ? data.reasoning : null;
+  if (reasoning && isAicolateProvider(provider) && reasoning.effort === "max") {
+    data.reasoning = { ...reasoning, effort: "xhigh" };
+  }
+  return data;
+}
+
 function rewriteModel(data, provider) {
-  if (!data || typeof data !== "object" || !("model" in data)) return data;
+  if (!data || typeof data !== "object") return data;
   const defaultModel = String(provider.defaultModel || "").trim();
   const mapping = provider.modelMapping && typeof provider.modelMapping === "object" ? provider.modelMapping : {};
   const targetModel = mapping.enabled ? defaultModel || String(mapping.targetModel || "").trim() : defaultModel;
-  if (targetModel) data.model = targetModel;
+  if (targetModel && "model" in data) data.model = targetModel;
+  normalizeReasoningForProvider(data, provider);
   return data;
 }
 
@@ -413,8 +431,7 @@ function chatToolToResponseTool(chatTool) {
 }
 
 function isOpenRouterProvider(provider) {
-  const text = `${provider?.id || ""} ${provider?.name || ""} ${provider?.baseURL || ""}`;
-  return /openrouter/i.test(text);
+  return /openrouter/i.test(providerText(provider));
 }
 
 function shouldUseResponsesToolCompat(provider, requestPath, bridge) {
