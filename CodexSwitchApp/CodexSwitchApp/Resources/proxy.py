@@ -1075,6 +1075,28 @@ def responses_text_format_to_chat_instruction(text_config: Any) -> Optional[str]
     return None
 
 
+def responses_reasoning_to_openrouter_reasoning(reasoning: Any) -> Optional[Dict[str, object]]:
+    if not isinstance(reasoning, dict):
+        return None
+
+    converted: Dict[str, object] = {}
+    effort = reasoning.get("effort")
+    max_tokens = reasoning.get("max_tokens")
+    if isinstance(effort, str) and effort:
+        converted["effort"] = effort
+    elif isinstance(max_tokens, int) and max_tokens > 0:
+        converted["max_tokens"] = max_tokens
+
+    exclude = reasoning.get("exclude")
+    if isinstance(exclude, bool):
+        converted["exclude"] = exclude
+    enabled = reasoning.get("enabled")
+    if isinstance(enabled, bool):
+        converted["enabled"] = enabled
+
+    return converted or None
+
+
 def responses_body_to_chat_body(
     body: bytes,
     content_type: str,
@@ -1119,6 +1141,11 @@ def responses_body_to_chat_body(
         chat_request["max_tokens"] = data["max_output_tokens"]
     if data.get("max_completion_tokens") is not None:
         chat_request["max_completion_tokens"] = data["max_completion_tokens"]
+
+    if provider and is_openrouter_provider(provider):
+        reasoning = responses_reasoning_to_openrouter_reasoning(data.get("reasoning"))
+        if reasoning:
+            chat_request["reasoning"] = reasoning
 
     request_tools: List[Dict[str, object]] = []
     if isinstance(data.get("tools"), list):

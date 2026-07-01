@@ -740,6 +740,19 @@ function responsesTextFormatToChatResponseFormat(textConfig) {
   return undefined;
 }
 
+function responsesReasoningToOpenRouterReasoning(reasoning) {
+  if (!reasoning || typeof reasoning !== "object") return undefined;
+  const converted = {};
+  if (typeof reasoning.effort === "string" && reasoning.effort) {
+    converted.effort = reasoning.effort;
+  } else if (Number.isInteger(reasoning.max_tokens) && reasoning.max_tokens > 0) {
+    converted.max_tokens = reasoning.max_tokens;
+  }
+  if (typeof reasoning.exclude === "boolean") converted.exclude = reasoning.exclude;
+  if (typeof reasoning.enabled === "boolean") converted.enabled = reasoning.enabled;
+  return Object.keys(converted).length ? converted : undefined;
+}
+
 function responseToChatBody(data, provider) {
   const body = {
     model: data.model || "",
@@ -751,6 +764,10 @@ function responseToChatBody(data, provider) {
   }
   if (data.max_output_tokens != null) body.max_tokens = data.max_output_tokens;
   if (data.max_completion_tokens != null) body.max_completion_tokens = data.max_completion_tokens;
+  if (isOpenRouterProvider(provider)) {
+    const reasoning = responsesReasoningToOpenRouterReasoning(data.reasoning);
+    if (reasoning) body.reasoning = reasoning;
+  }
   const requestTools = Array.isArray(data.tools) ? data.tools.filter((tool) => tool && typeof tool === "object") : [];
   requestTools.push(...collectToolSearchOutputTools(data.input));
   const tools = responsesToolsToChatTools(requestTools, {
