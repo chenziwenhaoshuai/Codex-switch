@@ -927,6 +927,13 @@ function filteredResponseHeaders(headers) {
   return result;
 }
 
+function isClientDisconnectError(error) {
+  const code = error?.code || error?.errno;
+  if (["EPIPE", "ERR_STREAM_DESTROYED"].includes(code)) return true;
+  const message = String(error?.message || "");
+  return /broken pipe/i.test(message);
+}
+
 function writeSseEvent(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -1552,6 +1559,10 @@ function createProxyServer({ host, port, getConfig, getSettings = () => ({}), ap
       res.writeHead(upstream.statusCode, filteredResponseHeaders(upstream.headers));
       res.end(req.method === "HEAD" ? undefined : upstream.body);
     } catch (error) {
+      if (isClientDisconnectError(error)) {
+        log(`client disconnected while streaming response: ${error.message}`);
+        return;
+      }
       log(`proxy error: ${error.message}`);
       if (res.headersSent) {
         if (!res.writableEnded) res.end();

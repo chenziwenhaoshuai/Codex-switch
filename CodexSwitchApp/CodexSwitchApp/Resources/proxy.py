@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import http.client
 import json
@@ -1570,6 +1571,15 @@ def save_proxy_error(error: Exception) -> None:
         fp.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def is_client_disconnect_error(error: BaseException) -> bool:
+    if isinstance(error, BrokenPipeError):
+        return True
+    errno_value = getattr(error, "errno", None)
+    if errno_value == errno.EPIPE:
+        return True
+    return False
+
+
 def append_jsonl(path: Path, entry: Dict[str, object]) -> None:
     if not LOG_ENABLED:
         return
@@ -1898,10 +1908,18 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
                 )
 
         except Exception as error:
+            if is_client_disconnect_error(error):
+                print(f"client disconnected while streaming response: {error}", file=sys.stderr)
+                return
             save_proxy_error(error)
             print(f"proxy error: {error}", file=sys.stderr)
             if not self.wfile.closed:
-                send_json(self, 502, {"ok": False, "error": str(error)})
+                try:
+                    send_json(self, 502, {"ok": False, "error": str(error)})
+                except Exception as send_error:
+                    if not is_client_disconnect_error(send_error):
+                        save_proxy_error(send_error)
+                        print(f"proxy error while sending 502: {send_error}", file=sys.stderr)
 
     def forward_to_upstream(
         self,
