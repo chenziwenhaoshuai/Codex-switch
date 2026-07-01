@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld("codexSwitch", {
   toggleProxy: () => ipcRenderer.invoke("toggle-proxy"),
   clearLogs: () => ipcRenderer.invoke("clear-logs"),
   copy: (value) => ipcRenderer.invoke("copy", value),
+  minimizeToTray: () => ipcRenderer.invoke("minimize-to-tray"),
+  quitApp: () => ipcRenderer.invoke("quit-app"),
+  onAskClose: (callback) => ipcRenderer.on("ask-close", () => callback()),
   onState: (callback) => ipcRenderer.on("state", (_event, state) => callback(state)),
   onLog: (callback) => ipcRenderer.on("log", (_event, line) => callback(line))
 });

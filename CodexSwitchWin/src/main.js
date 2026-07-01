@@ -1,10 +1,12 @@
-const { app, BrowserWindow, ipcMain, clipboard } = require("electron");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, clipboard } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const { createProxyServer } = require("./proxy");
 const { appDir, defaultProvider, loadConfig, normalizeProvider, saveConfig } = require("./providerStore");
 
 let mainWindow;
+let tray = null;
+let forceQuit = false;
 let config;
 let proxyServer = null;
 let settings = {
@@ -35,6 +37,13 @@ function createWindow() {
   });
   mainWindow.removeMenu();
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+
+  mainWindow.on("close", (event) => {
+    if (!forceQuit) {
+      event.preventDefault();
+      mainWindow.webContents.send("ask-close");
+    }
+  });
 }
 
 function state() {
@@ -75,9 +84,26 @@ function persistConfig(nextConfig) {
   mainWindow?.webContents.send("state", state());
 }
 
+function createTray() {
+  const iconPath = path.join(__dirname, "..", "..", "logo.png");
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  tray = new Tray(icon);
+  tray.setToolTip("Codex Switch");
+  tray.on("double-click", () => {
+    mainWindow.show();
+  });
+  const contextMenu = Menu.buildFromTemplate([
+    { label: "Show", click: () => mainWindow.show() },
+    { type: "separator" },
+    { label: "Quit", click: () => { forceQuit = true; app.quit(); } }
+  ]);
+  tray.setContextMenu(contextMenu);
+}
+
 app.whenReady().then(() => {
   config = loadConfig();
   createWindow();
+  createTray();
 
   ipcMain.handle("state", () => state());
   ipcMain.handle("save-provider", (_event, provider) => {
@@ -135,9 +161,22 @@ app.whenReady().then(() => {
     mainWindow?.webContents.send("state", state());
     return state();
   });
+  ipcMain.handle("minimize-to-tray", () => {
+    mainWindow.hide();
+  });
+  ipcMain.handle("quit-app", () => {
+    forceQuit = true;
+    app.quit();
+  });
 });
 
 app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    stopProxy();
+    app.quit();
+  }
+});
+
+app.on("before-quit", () => {
   stopProxy();
-  app.quit();
 });

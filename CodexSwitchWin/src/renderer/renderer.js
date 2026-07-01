@@ -174,6 +174,16 @@ function wire() {
     currentState.logs.push(line);
     render(currentState);
   });
+  window.codexSwitch.onAskClose(() => {
+    $("closeDialog").showModal();
+  });
+  $("minimizeBtn").addEventListener("click", () => {
+    $("closeDialog").close();
+    window.codexSwitch.minimizeToTray();
+  });
+  $("quitBtn").addEventListener("click", () => {
+    window.codexSwitch.quitApp();
+  });
 }
 
 wire();

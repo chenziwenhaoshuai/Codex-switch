@@ -88,6 +88,20 @@
     </form>
   </dialog>
 
+  <dialog id="closeDialog">
+    <form method="dialog" class="dialog-form">
+      <h2>Close Codex Switch</h2>
+      <p style="margin: 0; color: var(--muted); font-size: 13px;">Do you want to minimize to the system tray or quit?</p>
+      <div class="dialog-actions" style="justify-content: space-between;">
+        <button value="cancel">Cancel</button>
+        <span>
+          <button id="minimizeBtn" type="button">Minimize to tray</button>
+          <button id="quitBtn" type="button" class="primary" style="background: #dc2626 !important; border-color: #dc2626 !important;">Quit</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
   <script src="./renderer.js"></script>
 </body>
 </html>
