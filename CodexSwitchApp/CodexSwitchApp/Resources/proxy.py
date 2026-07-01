@@ -287,6 +287,22 @@ def namespace_from_chat_tool_name(name: object) -> Optional[Dict[str, str]]:
     }
 
 
+def normalize_apply_patch_input(input_value: Any) -> str:
+    text = "" if input_value is None else str(input_value)
+    if "*** Begin Patch" not in text:
+        return text
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    normalized_lines: List[str] = []
+    for line in text.split("\n"):
+        if line.startswith("*** Edit File: "):
+            normalized_lines.append("*** Update File: " + line[len("*** Edit File: "):])
+        elif re.match(r"^@@\s+-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@\s*$", line):
+            normalized_lines.append("@@")
+        else:
+            normalized_lines.append(line)
+    return "\n".join(normalized_lines)
+
+
 def parse_tool_input(arguments_text: Any) -> str:
     raw = arguments_text if isinstance(arguments_text, str) else json.dumps(arguments_text or {}, ensure_ascii=False)
     try:
@@ -492,6 +508,7 @@ def response_apply_patch_call_to_chat_tool_call(item: Dict[str, object]) -> Dict
     patch_input = operation.get("diff")
     if not isinstance(patch_input, str):
         patch_input = json.dumps(operation, ensure_ascii=False, separators=(",", ":"))
+    patch_input = normalize_apply_patch_input(patch_input)
     return {
         "id": call_id,
         "type": "function",
@@ -682,6 +699,24 @@ def responses_input_to_chat_messages(data: Dict[str, object]) -> List[Dict[str, 
 def build_custom_tool_chat_tool(tool: Dict[str, object]) -> Dict[str, object]:
     name = str(tool.get("name") or "custom_tool")
     description = "Original tool definition:\n```json\n" + json.dumps(tool, ensure_ascii=False) + "\n```"
+    if name == APPLY_PATCH_TOOL_NAME:
+        description += "\n" + "\n".join(
+            [
+                "",
+                "Codex apply_patch is a raw patch string, not a JSON object and not unified diff.",
+                "Use exactly:",
+                "*** Begin Patch",
+                "*** Add File: path",
+                "+new line",
+                "*** Update File: path",
+                "@@",
+                " unchanged context line",
+                "-old line",
+                "+new line",
+                "*** End Patch",
+                "For Update File, hunk headers must be `@@` or `@@ label`, not `@@ -1,1 +1,1 @@`. Context lines must start with a single space.",
+            ]
+        )
     return {
         "type": "function",
         "function": {
@@ -1137,14 +1172,18 @@ def chat_tool_calls_to_response_items(tool_calls: Any) -> List[Dict[str, object]
             arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
         function_name = str(function.get("name") or "")
         if is_custom_compat_function_name(function_name):
+            name = custom_tool_name_from_function_name(function_name)
+            tool_input = parse_tool_input(arguments)
+            if name == APPLY_PATCH_TOOL_NAME:
+                tool_input = normalize_apply_patch_input(tool_input)
             items.append(
                 {
                     "id": f"ctc_{call_id}",
                     "type": "custom_tool_call",
                     "status": "completed",
                     "call_id": call_id,
-                    "name": custom_tool_name_from_function_name(function_name),
-                    "input": parse_tool_input(arguments),
+                    "name": name,
+                    "input": tool_input,
                 }
             )
             continue
@@ -1232,6 +1271,9 @@ def iter_sse_events(upstream_response: http.client.HTTPResponse) -> Iterable[Tup
     event = ""
     data_lines: List[str] = []
 
+    def sse_field_value(value: str) -> str:
+        return value[1:] if value.startswith(" ") else value
+
     def flush() -> Optional[Tuple[str, str]]:
         nonlocal event
         nonlocal data_lines
@@ -1259,9 +1301,9 @@ def iter_sse_events(upstream_response: http.client.HTTPResponse) -> Iterable[Tup
         if line.startswith(":"):
             continue
         if line.startswith("event:"):
-            event = line[6:].strip()
+            event = sse_field_value(line[6:]).strip()
         elif line.startswith("data:"):
-            data_lines.append(line[5:].lstrip())
+            data_lines.append(sse_field_value(line[5:]))
 
 
 def write_sse_event(handler: BaseHTTPRequestHandler, event: str, data: Dict[str, object]) -> None:
@@ -2434,6 +2476,8 @@ class CaptureProxyHandler(BaseHTTPRequestHandler):
             if send_item.get("type") == "custom_tool_call":
                 send_item["name"] = custom_tool_name_from_function_name(send_item.get("name"))
                 send_item["input"] = parse_tool_input(send_item.get("arguments"))
+                if send_item["name"] == APPLY_PATCH_TOOL_NAME:
+                    send_item["input"] = normalize_apply_patch_input(send_item["input"])
                 send_item.pop("arguments", None)
             elif send_item.get("type") == "tool_search_call":
                 send_item["name"] = TOOL_SEARCH_TOOL_NAME
