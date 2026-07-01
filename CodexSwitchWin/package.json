@@ -15,9 +15,12 @@
     "directories": {
       "output": "dist"
     },
-    "files": [
-      "src/**/*",
-      "package.json"
+   "files": [
+     "src/**/*",
+     "package.json"
+   ],
+    "asarUnpack": [
+      "src/tray-icon.png"
     ],
     "win": {
       "target": [

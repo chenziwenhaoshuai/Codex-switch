@@ -85,8 +85,8 @@ function persistConfig(nextConfig) {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, "..", "..", "logo.png");
-  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  const iconPath = path.join(__dirname, "tray-icon.png");
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 32, height: 32 });
   tray = new Tray(icon);
   tray.setToolTip("Codex Switch");
   tray.on("double-click", () => {
