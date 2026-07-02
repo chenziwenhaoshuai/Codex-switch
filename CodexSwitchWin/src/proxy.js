@@ -155,9 +155,38 @@ function stripEncryptedContentForProvider(data, provider) {
   return data;
 }
 
+function ensureFunctionParameterSchemaType(value) {
+  let changed = false;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (ensureFunctionParameterSchemaType(item)) changed = true;
+    }
+    return changed;
+  }
+  if (!value || typeof value !== "object") return false;
+
+  if (value.type === "function") {
+    if (value.parameters && typeof value.parameters === "object" && !Array.isArray(value.parameters) && !("type" in value.parameters)) {
+      value.parameters.type = "object";
+      changed = true;
+    }
+    const fn = value.function && typeof value.function === "object" ? value.function : null;
+    if (fn?.parameters && typeof fn.parameters === "object" && !Array.isArray(fn.parameters) && !("type" in fn.parameters)) {
+      fn.parameters.type = "object";
+      changed = true;
+    }
+  }
+
+  for (const child of Object.values(value)) {
+    if (ensureFunctionParameterSchemaType(child)) changed = true;
+  }
+  return changed;
+}
+
 function rewriteModel(data, provider) {
   if (!data || typeof data !== "object") return data;
   stripEncryptedContentForProvider(data, provider);
+  ensureFunctionParameterSchemaType(data);
   const defaultModel = String(provider.defaultModel || "").trim();
   const mapping = provider.modelMapping && typeof provider.modelMapping === "object" ? provider.modelMapping : {};
   const targetModel = mapping.enabled ? defaultModel || String(mapping.targetModel || "").trim() : defaultModel;

@@ -275,6 +275,35 @@ def strip_encrypted_content_for_provider(data: Dict[str, object], provider: Dict
     return changed
 
 
+def ensure_function_parameter_schema_type(value: Any) -> bool:
+    changed = False
+    if isinstance(value, list):
+        for item in value:
+            if ensure_function_parameter_schema_type(item):
+                changed = True
+        return changed
+    if not isinstance(value, dict):
+        return False
+
+    if value.get("type") == "function":
+        parameters = value.get("parameters")
+        if isinstance(parameters, dict) and "type" not in parameters:
+            parameters["type"] = "object"
+            changed = True
+
+        function = value.get("function")
+        if isinstance(function, dict):
+            function_parameters = function.get("parameters")
+            if isinstance(function_parameters, dict) and "type" not in function_parameters:
+                function_parameters["type"] = "object"
+                changed = True
+
+    for child in value.values():
+        if ensure_function_parameter_schema_type(child):
+            changed = True
+    return changed
+
+
 def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, object]) -> bytes:
     if not body or "application/json" not in content_type.lower():
         return body
@@ -289,6 +318,8 @@ def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, obj
 
     changed = strip_encrypted_content_for_provider(data, provider)
     if normalize_request_reasoning_for_provider(data, provider):
+        changed = True
+    if ensure_function_parameter_schema_type(data):
         changed = True
 
     default_model = str(provider.get("defaultModel") or "").strip()
