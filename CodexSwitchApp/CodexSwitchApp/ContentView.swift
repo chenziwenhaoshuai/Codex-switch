@@ -483,6 +483,9 @@ struct ProviderEditSheet: View {
             Toggle("启用Web search（仅适用于OpenRouter）", isOn: $draft.openRouterWebSearchEnabled)
                 .toggleStyle(.checkbox)
 
+            Toggle("删除请求中的 encrypted_content", isOn: $draft.stripEncryptedContentEnabled)
+                .toggleStyle(.checkbox)
+
             HStack {
                 Spacer()
                 Button("Cancel") {

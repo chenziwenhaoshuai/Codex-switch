@@ -176,6 +176,7 @@ def default_router_config() -> Dict[str, object]:
                     "targetModel": "",
                 },
                 "chatCompletionsBridgeEnabled": False,
+                "stripEncryptedContentEnabled": False,
             }
         ],
     }
@@ -245,6 +246,35 @@ def normalize_request_reasoning_for_provider(data: Dict[str, object], provider: 
     return False
 
 
+def strip_key_recursive(value: Any, key_to_strip: str) -> bool:
+    changed = False
+    if isinstance(value, dict):
+        if key_to_strip in value:
+            value.pop(key_to_strip, None)
+            changed = True
+        for child in list(value.values()):
+            if strip_key_recursive(child, key_to_strip):
+                changed = True
+    elif isinstance(value, list):
+        for item in value:
+            if strip_key_recursive(item, key_to_strip):
+                changed = True
+    return changed
+
+
+def strip_encrypted_content_for_provider(data: Dict[str, object], provider: Dict[str, object]) -> bool:
+    if not bool(provider.get("stripEncryptedContentEnabled", False)):
+        return False
+    changed = strip_key_recursive(data, "encrypted_content")
+    include = data.get("include")
+    if isinstance(include, list):
+        filtered_include = [item for item in include if item != "reasoning.encrypted_content"]
+        if len(filtered_include) != len(include):
+            data["include"] = filtered_include
+            changed = True
+    return changed
+
+
 def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, object]) -> bytes:
     if not body or "application/json" not in content_type.lower():
         return body
@@ -257,7 +287,9 @@ def rewrite_request_body(body: bytes, content_type: str, provider: Dict[str, obj
     if not isinstance(data, dict):
         return body
 
-    changed = normalize_request_reasoning_for_provider(data, provider)
+    changed = strip_encrypted_content_for_provider(data, provider)
+    if normalize_request_reasoning_for_provider(data, provider):
+        changed = True
 
     default_model = str(provider.get("defaultModel") or "").strip()
     model_mapping = provider.get("modelMapping")

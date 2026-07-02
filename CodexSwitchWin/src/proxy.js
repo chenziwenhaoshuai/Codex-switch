@@ -127,8 +127,37 @@ function normalizeReasoningForProvider(data, provider) {
   return data;
 }
 
+function stripKeyRecursive(value, keyToStrip) {
+  let changed = false;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (stripKeyRecursive(item, keyToStrip)) changed = true;
+    }
+    return changed;
+  }
+  if (!value || typeof value !== "object") return false;
+  if (Object.prototype.hasOwnProperty.call(value, keyToStrip)) {
+    delete value[keyToStrip];
+    changed = true;
+  }
+  for (const child of Object.values(value)) {
+    if (stripKeyRecursive(child, keyToStrip)) changed = true;
+  }
+  return changed;
+}
+
+function stripEncryptedContentForProvider(data, provider) {
+  if (!provider?.stripEncryptedContentEnabled || !data || typeof data !== "object") return data;
+  stripKeyRecursive(data, "encrypted_content");
+  if (Array.isArray(data.include)) {
+    data.include = data.include.filter((item) => item !== "reasoning.encrypted_content");
+  }
+  return data;
+}
+
 function rewriteModel(data, provider) {
   if (!data || typeof data !== "object") return data;
+  stripEncryptedContentForProvider(data, provider);
   const defaultModel = String(provider.defaultModel || "").trim();
   const mapping = provider.modelMapping && typeof provider.modelMapping === "object" ? provider.modelMapping : {};
   const targetModel = mapping.enabled ? defaultModel || String(mapping.targetModel || "").trim() : defaultModel;
