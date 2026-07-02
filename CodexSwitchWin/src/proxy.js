@@ -155,6 +155,80 @@ function stripEncryptedContentForProvider(data, provider) {
   return data;
 }
 
+const FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS = new Set(["oneOf", "anyOf", "allOf", "enum", "const", "not"]);
+
+function collectObjectSchemaVariants(schema) {
+  if (!schema || typeof schema !== "object" || Array.isArray(schema)) return [];
+  const variants = [];
+  if (schema.type === "object" || (schema.properties && typeof schema.properties === "object" && !Array.isArray(schema.properties))) {
+    variants.push(schema);
+  }
+  for (const key of ["oneOf", "anyOf", "allOf"]) {
+    if (!Array.isArray(schema[key])) continue;
+    for (const nested of schema[key]) variants.push(...collectObjectSchemaVariants(nested));
+  }
+  return variants;
+}
+
+function normalizeFunctionParametersSchema(parameters) {
+  let changed = false;
+  if (parameters.type !== "object") {
+    parameters.type = "object";
+    changed = true;
+  }
+  if (![...FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS].some((key) => key in parameters)) return changed;
+
+  const variants = collectObjectSchemaVariants(parameters);
+  const properties = parameters.properties && typeof parameters.properties === "object" && !Array.isArray(parameters.properties)
+    ? { ...parameters.properties }
+    : {};
+  const requiredSets = [];
+  const firstRequiredOrder = [];
+  let hasStrictVariant = false;
+
+  for (const variant of variants) {
+    if (variant.properties && typeof variant.properties === "object" && !Array.isArray(variant.properties)) {
+      for (const [name, schema] of Object.entries(variant.properties)) {
+        if (!(name in properties)) properties[name] = schema;
+      }
+    }
+    if (Array.isArray(variant.required) && variant.required.every((item) => typeof item === "string")) {
+      requiredSets.push(new Set(variant.required));
+      for (const item of variant.required) {
+        if (!firstRequiredOrder.includes(item)) firstRequiredOrder.push(item);
+      }
+    }
+    if (variant.additionalProperties === false) hasStrictVariant = true;
+  }
+
+  for (const key of FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS) {
+    if (key in parameters) {
+      delete parameters[key];
+      changed = true;
+    }
+  }
+
+  if (Object.keys(properties).length) {
+    parameters.properties = properties;
+    changed = true;
+  }
+
+  if (requiredSets.length) {
+    const commonRequired = firstRequiredOrder.filter((item) => requiredSets.every((set) => set.has(item)));
+    if (commonRequired.length) {
+      parameters.required = commonRequired;
+      changed = true;
+    }
+  }
+
+  if (hasStrictVariant && !("additionalProperties" in parameters)) {
+    parameters.additionalProperties = false;
+    changed = true;
+  }
+
+  return changed;
+}
+
 function ensureFunctionParameterSchemaType(value) {
   let changed = false;
   if (Array.isArray(value)) {
@@ -166,15 +240,9 @@ function ensureFunctionParameterSchemaType(value) {
   if (!value || typeof value !== "object") return false;
 
   if (value.type === "function") {
-    if (value.parameters && typeof value.parameters === "object" && !Array.isArray(value.parameters) && !("type" in value.parameters)) {
-      value.parameters.type = "object";
-      changed = true;
-    }
+    if (value.parameters && typeof value.parameters === "object" && !Array.isArray(value.parameters) && normalizeFunctionParametersSchema(value.parameters)) changed = true;
     const fn = value.function && typeof value.function === "object" ? value.function : null;
-    if (fn?.parameters && typeof fn.parameters === "object" && !Array.isArray(fn.parameters) && !("type" in fn.parameters)) {
-      fn.parameters.type = "object";
-      changed = true;
-    }
+    if (fn?.parameters && typeof fn.parameters === "object" && !Array.isArray(fn.parameters) && normalizeFunctionParametersSchema(fn.parameters)) changed = true;
   }
 
   for (const child of Object.values(value)) {

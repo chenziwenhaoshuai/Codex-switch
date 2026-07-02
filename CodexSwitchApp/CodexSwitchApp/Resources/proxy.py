@@ -275,6 +275,80 @@ def strip_encrypted_content_for_provider(data: Dict[str, object], provider: Dict
     return changed
 
 
+FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS = {"oneOf", "anyOf", "allOf", "enum", "const", "not"}
+
+
+def collect_object_schema_variants(schema: Any) -> List[Dict[str, object]]:
+    if not isinstance(schema, dict):
+        return []
+
+    variants: List[Dict[str, object]] = []
+    if schema.get("type") == "object" or isinstance(schema.get("properties"), dict):
+        variants.append(schema)
+
+    for key in ("oneOf", "anyOf", "allOf"):
+        nested_schemas = schema.get(key)
+        if isinstance(nested_schemas, list):
+            for nested_schema in nested_schemas:
+                variants.extend(collect_object_schema_variants(nested_schema))
+
+    return variants
+
+
+def normalize_function_parameters_schema(parameters: Dict[str, object]) -> bool:
+    changed = False
+    if parameters.get("type") != "object":
+        parameters["type"] = "object"
+        changed = True
+
+    if not any(key in parameters for key in FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS):
+        return changed
+
+    variants = collect_object_schema_variants(parameters)
+    properties: Dict[str, object] = dict(parameters.get("properties") if isinstance(parameters.get("properties"), dict) else {})
+    required_sets: List[set[str]] = []
+    first_required_order: List[str] = []
+    has_strict_variant = False
+
+    for variant in variants:
+        variant_properties = variant.get("properties")
+        if isinstance(variant_properties, dict):
+            for name, schema in variant_properties.items():
+                properties.setdefault(str(name), schema)
+
+        variant_required = variant.get("required")
+        if isinstance(variant_required, list) and all(isinstance(item, str) for item in variant_required):
+            required = set(variant_required)
+            required_sets.append(required)
+            for item in variant_required:
+                if item not in first_required_order:
+                    first_required_order.append(item)
+
+        if variant.get("additionalProperties") is False:
+            has_strict_variant = True
+
+    for key in FORBIDDEN_FUNCTION_PARAMETER_TOP_KEYS:
+        if key in parameters:
+            parameters.pop(key, None)
+            changed = True
+
+    if properties:
+        parameters["properties"] = properties
+        changed = True
+
+    if required_sets:
+        common_required = set.intersection(*required_sets)
+        if common_required:
+            parameters["required"] = [item for item in first_required_order if item in common_required]
+            changed = True
+
+    if has_strict_variant and "additionalProperties" not in parameters:
+        parameters["additionalProperties"] = False
+        changed = True
+
+    return changed
+
+
 def ensure_function_parameter_schema_type(value: Any) -> bool:
     changed = False
     if isinstance(value, list):
@@ -287,15 +361,13 @@ def ensure_function_parameter_schema_type(value: Any) -> bool:
 
     if value.get("type") == "function":
         parameters = value.get("parameters")
-        if isinstance(parameters, dict) and "type" not in parameters:
-            parameters["type"] = "object"
+        if isinstance(parameters, dict) and normalize_function_parameters_schema(parameters):
             changed = True
 
         function = value.get("function")
         if isinstance(function, dict):
             function_parameters = function.get("parameters")
-            if isinstance(function_parameters, dict) and "type" not in function_parameters:
-                function_parameters["type"] = "object"
+            if isinstance(function_parameters, dict) and normalize_function_parameters_schema(function_parameters):
                 changed = True
 
     for child in value.values():
